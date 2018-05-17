@@ -1,7 +1,9 @@
 <?php
-namespace Babylcraft\WordPress;
+namespace Babylcraft\WordPress\Plugin;
 
 use Babylcraft\Babylon;
+use Babylcraft\WordPress\Util;
+use Babylcraft\WordPress\PluginAPI;
 use Babylcraft\WordPress\MVC\ControllerContainer;
 use Babylcraft\WordPress\Plugin\Config\IPluginConfig;
 
