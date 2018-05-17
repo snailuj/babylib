@@ -1,0 +1,34 @@
+{
+    "name" : "babylcraft/babylib",
+    "description" : "Plugin MVC framework with helpful additions",
+    "keywords" : [ "wordpress", "bookings", "babylcraft" ],
+    "license" : "GPL-2.0+",
+    "version" : "0.0.1",
+    "authors" : [
+        {
+            "name" : "Julian Suggate",
+            "email" : "julian.suggate@gmail.com",
+            "role" : "Depressed Angry Man"
+        },
+        {
+            "name" : "Leo Suggate",
+            "email" : "leo@parallelconsciousness.com",
+            "role" : "Young Nervous Brain"
+        }
+    ],
+    "require" : {
+        "php" : ">=7.1",
+        "pimple/pimple": "^3.2",
+        "downshiftorg/wp-event-emitter": "^6.0"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "autoload": {
+      "psr-4": {"Babylcraft\\": "includes/Babylcraft/"}
+    },
+    "support": {
+        "issues": "https://bitbucket.org/babylcraft/babylib/issues?status=new&status=open",
+        "source": "https://bitbucket.org/babylcraft/babylib/src"
+    }
+}
