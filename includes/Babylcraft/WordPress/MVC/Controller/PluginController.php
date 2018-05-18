@@ -4,11 +4,11 @@ namespace Babylcraft\WordPress\MVC\Controller;
 use Babylcraft\WordPress\PluginAPI;
 use Babylcraft\WordPress\Util;
 
-use Babylcraft\WordPress\Plugin\Config\IPluginInfo;
+use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
 /**
  * Template class for Controller objects with factory
- * method for constructing from instance of IPluginInfo
+ * method for constructing from instance of IPluginSingleConfig
  */
 abstract class PluginController {
   protected $util;

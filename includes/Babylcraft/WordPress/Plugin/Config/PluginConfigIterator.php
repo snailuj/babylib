@@ -1,8 +1,7 @@
 <?php
 namespace Babylcraft\WordPress\Plugin\Config;
 
-class PluginInfoIterator implements IPluginInfoIterator, \Countable {
-
+class PluginConfigIterator implements IPluginConfigIterator, \Countable {
   /*
    * @var array
    */
@@ -14,9 +13,7 @@ class PluginInfoIterator implements IPluginInfoIterator, \Countable {
   private $currentItemIndex = 0;
 
   public function __construct(array $pluginInfoList) {
-    foreach( $pluginInfoList as $pluginName => $pluginInfo ) {
-      $this->pluginInfoList[] = new PluginInfo( $pluginName, $pluginInfo[0], $pluginInfo[1] );
-    }
+    $this->pluginInfoList = $pluginInfoList;
   }
 
   public function count() {
@@ -31,7 +28,7 @@ class PluginInfoIterator implements IPluginInfoIterator, \Countable {
     $this->currentItemIndex++;
   }
 
-  public function current() : IPluginInfo {
+  public function current() : IPluginSingleConfig {
     return $this->pluginInfoList[$this->currentItemIndex];
   }
 
