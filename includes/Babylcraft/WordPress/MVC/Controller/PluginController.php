@@ -2,7 +2,6 @@
 namespace Babylcraft\WordPress\MVC\Controller;
 
 use Babylcraft\WordPress\PluginAPI;
-use Babylcraft\WordPress\Util;
 
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
@@ -11,7 +10,6 @@ use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
  * method for constructing from instance of IPluginSingleConfig
  */
 abstract class PluginController {
-  protected $util;
   protected $pluginAPI;
   private $viewPath;
 
@@ -23,17 +21,14 @@ abstract class PluginController {
    * @param PluginAPI   object for hooking into WordPress events
    */
   public function __construct(PluginAPI $pluginAPI,
-            //todo rename this parameter
-            Util $util,
             string $viewPath) {
     $this->pluginAPI = $pluginAPI;
-    $this->util = $util; //todo rename this variable
     $this->viewPath = $viewPath;
 
     $this->registerHooks($pluginAPI);
   }
 
-  protected abstract function registerHooks(PluginAPI $pluginAPI);
+  protected abstract function registerHooks();
 
   /*
    * Must override. View files are by convention assumed to be located in
@@ -102,7 +97,7 @@ abstract class PluginController {
   }
 
   protected function getViewLocationURI() : string {
-    return $this->util->getPathURI($this->getViewLocation(), false);
+    return $this->pluginAPI->getPathURI($this->getViewLocation(), false);
   }
 
   protected const ERROR_NOT_PERMITTED = 1;
@@ -117,7 +112,7 @@ abstract class PluginController {
         $message .= 'missing data from request';
         break;
       default:
-        Util::logMessage("Unknown error code $errorCode", __FILE__, __LINE__);
+        $pluginAPI->logMessage("Unknown error code $errorCode", __FILE__, __LINE__);
         $message .= "unknown error $errorCode";
     }
 

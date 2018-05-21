@@ -1,11 +1,12 @@
 <?php
 namespace Babylcraft\WordPress\Plugin;
 
-use Babylcraft\WordPress\Util;
 use Babylcraft\WordPress\PluginAPI;
-use Babylcraft\WordPress\MVC\ControllerContainer;
+use Babylcraft\WordPress\MVC\IControllerContainer;
 
 interface IBabylonPlugin {
+  public const SERVICE_KEY_PLUGIN_API = "Babyl_Plugin_API";
+
   /*
    * Activate the plugin
    */
@@ -18,7 +19,5 @@ interface IBabylonPlugin {
 
   public function getPluginAPI() : PluginAPI;
 
-  public function getUtil() : Util;
-
-  public function getControllers() : ControllerContainer;
+  public function getControllerContainer() : IControllerContainer;
 }

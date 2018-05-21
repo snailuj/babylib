@@ -1,28 +1,42 @@
 <?php
 namespace Babylcraft\WordPress\MVC;
 
-use Babylcraft\WordPress\Util;
+use Pimple\Container;
 use Babylcraft\WordPress\PluginAPI;
-use Babylcraft\WordPress\MVC\Controller\PluginController;
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
-use Pimple\Container;
-
-//todo rename this to ControllerFactory, it's just not ok
-class ControllerContainer extends Container {
-  public const SYSTEM_NOTES = "SystemNotes";
-
+class ControllerContainer implements IControllerContainer {
   private const KEY_CONTROLLER = "Controller";
 
+  /*
+   * @var Container   Bag for holding Controller instances
+   */
+  private $container;
+
+  /*
+   * @var string  Path to directory containing View assets
+   */
   private $viewPath;
-  public function __construct(PluginAPI $pluginAPI, Util $util, IPluginSingleConfig $pluginInfo) {
+  public function __construct(
+            PluginAPI $pluginAPI, IPluginSingleConfig $pluginInfo) {
+    $container = new Container();
+
     $controllerNames = $pluginInfo->getControllerNames();
+    $mvcNamespace = $pluginInfo->getMVCNamespace();
+    $mvcNamespace = $mvcNamespace ? "{$mvcNamespace}" : "";
     foreach( $controllerNames as $controllerName ) {
       $controllerClass
-        = "{$pluginInfo->getMVCNamespace()}\\Controller\\{$controllerName}";
-      $this[$this::KEY_CONTROLLER ."_{$controllerName}"]
+        = "{$mvcNamespace}\\Controller\\{$controllerName}";
+      if( !class_exists($controllerClass) ) {
+        $pluginAPI->logMessage("JSJSJS");
+        throw new ControllerContainerException(
+          ControllerContainerException::ERROR_NO_SUCH_CLASS,
+          $controllerClass);
+      }
+
+      $container[$this::KEY_CONTROLLER ."_{$controllerName}"]
         = new $controllerClass( //construct from string
-                  $pluginAPI, $util, $pluginInfo->getViewPath());
+                  $pluginAPI, $pluginInfo->getViewPath());
     }
   }
 }

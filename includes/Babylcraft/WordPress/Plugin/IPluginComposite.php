@@ -2,7 +2,7 @@
 namespace Babylcraft\WordPress\Plugin;
 
 use Babylcraft\Babylon;
-use Babylcraft\WordPress\MVC\ControllerContainer;
+use Babylcraft\WordPress\MVC\IControllerContainer;
 use Babylcraft\WordPress\Plugin\Config\IPluginCompositeConfig;
 
 interface IPluginComposite extends IBabylonPlugin {
@@ -14,5 +14,5 @@ interface IPluginComposite extends IBabylonPlugin {
 
   public function getPlugins() : IPluginIterator;
 
-  public function getControllersForPlugin(string $forPlugin) : ControllerContainer;
+  public function getControllersForPlugin(string $forPlugin) : IControllerContainer;
 }

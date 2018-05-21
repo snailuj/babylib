@@ -1,8 +1,6 @@
 <?php
 namespace Babylcraft\WordPress\Plugin\Config;
 
-use Babylcraft\WordPress\Util;
-
 class PluginSingleConfig implements IPluginSingleConfig {
   private $name;
   private $pluginDir;
@@ -54,15 +52,13 @@ class PluginSingleConfig implements IPluginSingleConfig {
     $this->mvcDir = "{$this->pluginDir}includes/{$controllerFrag}/";
     $controllerDir = "{$this->mvcDir}Controller";
     if (!file_exists($controllerDir)) {
-      //TODO throw exception from here
-      Util::logMessage("Controller Directory $controllerDir not found", __FILE__, __LINE__);
-      return;
+      throw new PluginConfigurationException(
+        PluginConfigurationException::ERROR_CONTROLLER_DIR_NOT_FOUND, $controllerDir);
     }
 
     //iterate through PHP files in the controller dir
     foreach (glob($controllerDir."/*.php") as $fileName) {
       $fileName = substr($fileName, strrpos($fileName, "/") + 1); //chop off the path
-      Util::logMessage("filename is ". $fileName);
       $this->controllerNames[] = substr($fileName, 0, -4); //chop off the '.php' part
     }
   }
