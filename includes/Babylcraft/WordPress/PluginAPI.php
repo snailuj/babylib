@@ -80,17 +80,15 @@ class PluginAPI {
    */
   public function getPathURI(string $path, bool $useParent) : string {
     //plugin_dir_url always takes the parent dir of whatever's passed
-    //in so I'm passing placeholder text to stay in the view directory
+    //in so use placeholder text to stay in the given dir if $useParent = false
     return $useParent ?
       plugin_dir_url($path) :
       plugin_dir_url("$path/placeholdertext");
   }
 
-  /*
-   * Calling these statically is lazy, don't do it ;)
-   */
-  public function logContent(string $message, $content,
-    $fileName = '', $lineNum = '') {
+  //avoid calling these statically except for debugging purposes
+  public static function logContent(string $message, $content, $fileName = '', $lineNum = '') {
+    error_log("TEST");
     if (true == WP_DEBUG) {
       if (is_array($content) || is_object($content)) {
         PluginAPI::logMessage("{$message}: \n". print_r($content, true), $fileName, $lineNum);

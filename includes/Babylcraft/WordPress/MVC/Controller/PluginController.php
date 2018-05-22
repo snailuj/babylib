@@ -12,6 +12,7 @@ use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 abstract class PluginController {
   protected $pluginAPI;
   private $viewPath;
+  private $viewLocationURI;
 
   //todo refactor so this class doesn't need to know details of how
   //its constructed and can just be new()ed.
@@ -20,15 +21,31 @@ abstract class PluginController {
    * Create a new Controller, passing in dependencies
    * @param PluginAPI   object for hooking into WordPress events
    */
-  public function __construct(PluginAPI $pluginAPI,
-            string $viewPath) {
+  public function __construct(PluginAPI $pluginAPI, string $viewPath) {
     $this->pluginAPI = $pluginAPI;
     $this->viewPath = $viewPath;
+    $this->_registerHooks($pluginAPI);
+  }
 
-    $this->registerHooks($pluginAPI);
+  private function _registerHooks() {
+    $this->viewLocationURI = null;
+    $this->pluginAPI->addAction(
+      'admin_init', function() {
+        $this->viewLocationURI = $this->pluginAPI->getPathURI($this->getViewLocation(), false);
+      });
+
+    $this->pluginAPI->addAction(
+      'admin_enqueue_scripts', function() {
+        $this->enqueueScripts();
+      });
+
+    $this->registerHooks();
   }
 
   protected abstract function registerHooks();
+
+  //create empty fn if you don't want to enqueue any scripts
+  protected abstract function enqueueScripts();
 
   /*
    * Must override. View files are by convention assumed to be located in
@@ -62,6 +79,11 @@ abstract class PluginController {
       "{$this->getViewLocationURI()}{$viewName}.js", 'jquery');
   }
 
+  protected function enqueueViewStyle(string $viewName) {
+    $this->enqueueStyle($this->getViewStyleHandle($viewName),
+      "{$this->getViewLocationURI()}{$viewName}.css");
+  }
+
   /*
    * Enqueues the script given by scriptHandle. The script is
    * assumed to be in the View directory for this Controller
@@ -80,12 +102,25 @@ abstract class PluginController {
    * check_admin_referer()
    */
   protected function getViewScriptHandle(string $viewName) : string {
-    return "{$this->getControllerName()}$viewName";
+    return "{$this->getControllerName()}{$viewName}_js";
+  }
+
+  protected function getViewStyleHandle(string $viewName) : string {
+    return "{$this->getControllerName()}{$viewName}_css";
   }
 
   private function enqueueScript(string $scriptHandle,
-    string $scriptPathAndName, string $dependencies) {
+    string $scriptPathAndName, string $dependencies = null) {
     wp_enqueue_script($scriptHandle, $scriptPathAndName, $dependencies,
+      //Plugin::VERSION,
+      "0.0.1", //todo update me
+      //load scripts in footer to enable last-minute localising
+      $in_footer = true);
+  }
+
+  private function enqueueStyle(string $styleHandle,
+    string $stylePathAndName, string $dependencies = null) {
+    wp_enqueue_style($styleHandle, $stylePathAndName, $dependencies,
       //Plugin::VERSION,
       "0.0.1", //todo update me
       //load scripts in footer to enable last-minute localising
@@ -97,7 +132,11 @@ abstract class PluginController {
   }
 
   protected function getViewLocationURI() : string {
-    return $this->pluginAPI->getPathURI($this->getViewLocation(), false);
+    if (null == $this->viewLocationURI) {
+      throw new \BadMethodCallException("viewLocationURI is not available yet because 'admin_init' hook has not fired");
+    }
+
+    return $this->viewLocationURI;
   }
 
   protected const ERROR_NOT_PERMITTED = 1;

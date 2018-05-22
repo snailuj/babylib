@@ -28,7 +28,6 @@ class ControllerContainer implements IControllerContainer {
       $controllerClass
         = "{$mvcNamespace}\\Controller\\{$controllerName}";
       if( !class_exists($controllerClass) ) {
-        $pluginAPI->logMessage("JSJSJS");
         throw new ControllerContainerException(
           ControllerContainerException::ERROR_NO_SUCH_CLASS,
           $controllerClass);

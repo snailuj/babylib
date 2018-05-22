@@ -24,7 +24,7 @@ class PluginSingleConfig implements IPluginSingleConfig {
   }
 
   public function getViewPath() : string {
-    return "{$this->mvcDir}/View";
+    return "{$this->mvcDir}View";
   }
 
   public function getPluginName() : string {
