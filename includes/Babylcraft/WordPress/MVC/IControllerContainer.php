@@ -1,6 +1,7 @@
 <?php
 namespace Babylcraft\WordPress\MVC;
 
-interface IControllerContainer {
+interface IControllerContainer
+{
 
 }
