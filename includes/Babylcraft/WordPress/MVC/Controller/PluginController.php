@@ -112,16 +112,16 @@ abstract class PluginController
    * script is assumed to be in the path returned from $this->getViewLocation()
    * and named $viewName.js. jQuery is added as a dependency.
    */
-    protected function enqueueViewScript(string $viewName)
+    protected function enqueueViewScript(string $viewName, string $dependencies = null)
     {
         $this->enqueueScript(
             $this->getScriptHandle($viewName),
             "{$this->getViewLocationURI()}{$viewName}.js",
-            'jquery'
+            'jquery '. $dependencies
         );
     }
 
-    protected function enqueueLibScript(string $libName, string $dependencies)
+    protected function enqueueLibScript(string $libName, string $dependencies = null)
     {
         $this->enqueueScript(
             $this->getScriptHandle($libName),
