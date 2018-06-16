@@ -4,6 +4,7 @@ namespace Babylcraft\WordPress\Plugin\Config;
 class PluginSingleConfig implements IPluginSingleConfig
 {
     private $name;
+    private $version;
     private $pluginDir;
     private $mvcNamespace;
     private $mvcDir;
@@ -16,9 +17,11 @@ class PluginSingleConfig implements IPluginSingleConfig
     public function __construct(
         string $name,
         string $pluginDir,
-        string $mvcNamespace
+        string $mvcNamespace,
+        string $version
     ) {
         $this->name = $name;
+        $this->version = $version;
         $this->pluginDir = $pluginDir;
         $this->mvcNamespace = $mvcNamespace;
 
@@ -41,6 +44,11 @@ class PluginSingleConfig implements IPluginSingleConfig
     public function getPluginName() : string
     {
         return $this->name;
+    }
+
+    public function getPluginVersion() : string
+    {
+        return $this->version;
     }
 
     public function getControllerNames() : array

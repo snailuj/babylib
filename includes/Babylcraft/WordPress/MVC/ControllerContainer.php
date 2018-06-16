@@ -3,11 +3,12 @@ namespace Babylcraft\WordPress\MVC;
 
 use Pimple\Container;
 use Babylcraft\WordPress\PluginAPI;
+use Babylcraft\WordPress\MVC\Controller\IPluginController;
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
 class ControllerContainer implements IControllerContainer
 {
-    private const KEY_CONTROLLER = "Controller";
+    const KEY_CONTROLLER = "Controller";
 
   /*
    * @var Container   Bag for holding Controller instances
@@ -36,13 +37,20 @@ class ControllerContainer implements IControllerContainer
                     $controllerClass
                 );
             }
+            
+            //construct from string
+            $controller = new $controllerClass();
+            if (!($controller instanceof IPluginController)) {
+                throw new ControllerContainerException(
+                    ControllerContainerException::ERROR_NOT_A_CONTROLLER,
+                    $controllerClass
+                );
+            }
 
-            $container[$this::KEY_CONTROLLER ."_{$controllerName}"]
-            = new $controllerClass( //construct from string
-                $pluginAPI,
-                $pluginInfo->getViewPath(),
-                $pluginInfo->getLibPath()
-            );
+            //can't cast to a class in PHP :(
+            $controller->configure($pluginAPI, $pluginInfo);
+            $container[$this::KEY_CONTROLLER ."_{$controllerName}"] =
+                $controller;
         }
     }
 }

@@ -14,15 +14,16 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
         string $name,
         string $pluginDir,
         string $mvcNamespace,
-        array $pluginInfoList = []
+        array $pluginInfoList = [],
+        string $version
     ) {
 
-        parent::__construct($name, $pluginDir, $mvcNamespace);
+        parent::__construct($name, $pluginDir, $mvcNamespace, $version);
 
         $pluginConfigList = [];
         foreach ($pluginInfoList as $pluginName => $pluginInfo) {
             $pluginConfigList[]
-            = new PluginSingleConfig($pluginName, $pluginInfo[0], $pluginInfo[1]);
+            = new PluginSingleConfig($pluginName, $pluginInfo[0], $pluginInfo[1], $pluginInfo[2]);
         }
 
         $this->plugins = new PluginConfigIterator($pluginConfigList);
