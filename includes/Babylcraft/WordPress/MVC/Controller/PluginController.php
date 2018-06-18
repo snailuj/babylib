@@ -12,7 +12,7 @@ abstract class PluginController implements IPluginController
 {
     protected $pluginAPI;
     protected $version;
-    protected $viewPath;
+    private $viewPath;
     private $viewLocationURI;
 
   /**
@@ -23,7 +23,7 @@ abstract class PluginController implements IPluginController
     {
         $this->pluginAPI = $pluginAPI;
         $this->version = $pluginConfig->getPluginVersion();
-        $this->viewPath = $pluginConfig->getViewPath();
+        $this->viewPath = $pluginAPI->trailingslashit($pluginConfig->getViewPath());
         $this->selfRegisterHooks();
     }
 
@@ -57,12 +57,17 @@ abstract class PluginController implements IPluginController
     */
     abstract protected function getControllerName();
 
+    protected function getViewPath() : string
+    {
+        return $this->pluginAPI->trailingslashit($this->viewPath);
+    }
+
    /*
     * The path to your view files
     */
     protected function getViewLocation() : string
     {
-        return $this->viewPath;
+        return $this->getViewPath();
     }
 
    /*
@@ -70,13 +75,16 @@ abstract class PluginController implements IPluginController
     * script is assumed to be in the path returned from $this->getViewLocation()
     * and named $viewName.js. jQuery is added as a dependency.
     */
-    protected function enqueueViewScript(string $viewName, string $dependencies = null)
+    protected function enqueueViewScript(string $viewName, string $dependencies = null) : string
     {
+        $handle = $this->getScriptHandle($viewName);
         $this->enqueueScript(
-            $this->getScriptHandle($viewName),
+            $handle,
             "{$this->getViewLocationURI()}{$viewName}.js",
             $dependencies
         );
+
+        return $handle;
     }
 
     protected function enqueueViewStyle(string $viewName)
@@ -123,12 +131,12 @@ abstract class PluginController implements IPluginController
    */
     protected function getScriptHandle(string $viewName) : string
     {
-        return "{$this->getControllerName()}{$viewName}_js";
+        return "{$this->getControllerName()}_{$viewName}_js";
     }
 
     protected function getViewStyleHandle(string $viewName) : string
     {
-        return "{$this->getControllerName()}{$viewName}_css";
+        return "{$this->getControllerName()}_{$viewName}_css";
     }
 
     protected function enqueueScript(
@@ -167,6 +175,6 @@ abstract class PluginController implements IPluginController
             );
         }
 
-        return $this->viewLocationURI;
+        return $this->pluginAPI->trailingslashit($this->viewLocationURI);
     }
 }

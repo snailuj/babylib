@@ -4,6 +4,7 @@ namespace Babylcraft\WordPress;
 //refactor me: core classes should not depend on specific plugins
 use Babylcraft\Plugin\IBabylonPlugin;
 use DownShift\Wordpress\EventEmitterInterface;
+//use function WP_CLI\Utils\trailingslashit;
 
 //todo refactor to use interfaces so client classes are more testable
 
@@ -98,6 +99,11 @@ class PluginAPI
         return $useParent ?
         plugin_dir_url($path) :
         plugin_dir_url("$path/placeholdertext");
+    }
+
+    public function trailingslashit(string $pathOrURI) : string
+    {
+        return trailingslashit($pathOrURI);
     }
 
   //avoid calling these statically except for debugging purposes

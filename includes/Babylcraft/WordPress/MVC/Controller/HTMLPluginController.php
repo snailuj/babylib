@@ -23,7 +23,7 @@ abstract class HTMLPluginController extends PluginController
         IPluginSingleConfig $pluginConfig
     ) {
         parent::configure($pluginAPI, $pluginConfig);
-        $this->libPath = $pluginConfig->getLibPath();
+        $this->libPath = $pluginAPI->trailingslashit($pluginConfig->getLibPath());
     }
 
     protected function selfRegisterHooks()
@@ -31,10 +31,10 @@ abstract class HTMLPluginController extends PluginController
         $this->pluginAPI->addAction(
             'admin_init',
             function () {
-                $this->libLocationURI = $this->pluginAPI->getPathURI(
+                $this->libLocationURI = $this->pluginAPI->trailingslashit($this->pluginAPI->getPathURI(
                     $this->libPath,
                     false
-                );
+                ));
             }
         );
 
@@ -62,7 +62,7 @@ abstract class HTMLPluginController extends PluginController
     //If not remove this override
     protected function getViewLocation() : string
     {
-        return "{$this->viewPath}/{$this->getControllerName()}";
+        return "{$this->getViewPath()}{$this->getControllerName()}";
     }
 
    /*
@@ -77,7 +77,7 @@ abstract class HTMLPluginController extends PluginController
     */
     protected function getViewMarkupFile(string $viewName) : string
     {
-        return "{$this->getViewLocation()}/${viewName}.php";
+        return "{$this->getViewLocation()}${viewName}.php";
     }
 
     protected function enqueueLibScript(string $libName, string $dependencies = null)
