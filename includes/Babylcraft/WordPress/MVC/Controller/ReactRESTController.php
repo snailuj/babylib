@@ -11,8 +11,22 @@ abstract class ReactRESTController extends PluginController
 
     abstract protected function getAjaxBase() : string;
 
-    protected function getViewLocation(): string
+    /**
+     * Uses WP to enqueue $scriptName.js from the built view location.
+     *
+     * @param string $scriptName    The name of the script minus file extension. '.js' will be added
+     * @return string   The generated script handle
+     */
+    protected function enqueueReactScript(string $scriptName) : string
     {
-        return "{$this->pluginAPI->trailingslashit($this->getViewPath())}dist/";
+        $handle = $this->getScriptHandle($scriptName);
+        $this->enqueueOtherScript($handle, "{$this->getBuiltViewLocationURI()}{$scriptName}.js");
+
+        return $handle;
+    }
+
+    protected function getBuiltViewLocationURI() : string
+    {
+        return "{$this->getViewLocationURI()}dist/";
     }
 }

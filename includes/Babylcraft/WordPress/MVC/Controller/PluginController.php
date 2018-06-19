@@ -57,6 +57,16 @@ abstract class PluginController implements IPluginController
     */
     abstract protected function getControllerName();
 
+    protected function createNonce(string $handle) : string
+    {
+        return $this->pluginAPI->createNonce($handle);
+    }
+
+    protected function localizeScript(string $handle, string $settingsName = 'settings', array $settings = [])
+    {
+        return $this->pluginAPI->localizeScript($handle, $settingsName, $settings);
+    }
+
     protected function getViewPath() : string
     {
         return $this->pluginAPI->trailingslashit($this->viewPath);

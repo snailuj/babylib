@@ -62,7 +62,7 @@ abstract class HTMLPluginController extends PluginController
     //If not remove this override
     protected function getViewLocation() : string
     {
-        return "{$this->getViewPath()}{$this->getControllerName()}";
+        return $this->pluginAPI->trailingslashit("{$this->getViewPath()}{$this->getControllerName()}");
     }
 
    /*

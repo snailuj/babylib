@@ -4,7 +4,6 @@ namespace Babylcraft\WordPress;
 //refactor me: core classes should not depend on specific plugins
 use Babylcraft\Plugin\IBabylonPlugin;
 use DownShift\Wordpress\EventEmitterInterface;
-//use function WP_CLI\Utils\trailingslashit;
 
 //todo refactor to use interfaces so client classes are more testable
 
@@ -104,6 +103,16 @@ class PluginAPI
     public function trailingslashit(string $pathOrURI) : string
     {
         return trailingslashit($pathOrURI);
+    }
+
+    public function createNonce(string $handle) : string
+    {
+        return wp_create_nonce($handle);
+    }
+
+    public function localizeScript(string $handle, string $settingsName = 'settings', array $settings = [])
+    {
+        return wp_localize_script($handle, $settingsName, $settings);
     }
 
   //avoid calling these statically except for debugging purposes
