@@ -7,11 +7,11 @@ class PluginConfigurationException extends BabylonException
 {
     public const ERROR_CONTROLLER_DIR_NOT_FOUND = 0;
 
-    protected function codeToMessage($code, $context)
+    protected function codeToMessage(int $code, $context) : string
     {
         $message = '';
         switch ($code) {
-            case ERROR_CONTROLLER_DIR_NOT_FOUND:
+            case $this::ERROR_CONTROLLER_DIR_NOT_FOUND:
                 $message = "Controller directory $context not found";
                 break;
             default:

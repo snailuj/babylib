@@ -79,6 +79,11 @@ class PluginAPI
         return $adminPage->base == 'dashboard';
     }
 
+    //TODO test if this works when plugin ISN'T symlinked?
+    public function registerSymlinkPlugin(string $pluginDir) : bool {
+        return wp_register_plugin_realpath($pluginDir);
+    }
+
   /*
    * Converts the given path into a web-accessible URI.
    *
@@ -93,11 +98,11 @@ class PluginAPI
    */
     public function getPathURI(string $path, bool $useParent) : string
     {
-      //plugin_dir_url always takes the parent dir of whatever's passed
-      //in so use placeholder text to stay in the given dir if $useParent = false
-        return $useParent ?
-        plugin_dir_url($path) :
-        plugin_dir_url("$path/placeholdertext");
+        //plugin_dir_url always takes the parent dir of whatever's passed
+        //in so use placeholder text to stay in the given dir if $useParent = false
+        $path .= $useParent ? "" : '/placeholdertext';
+        PluginAPI::logMessage("using ". $path .", returning ". plugin_dir_url($path));
+        return plugin_dir_url($path);
     }
 
     public function trailingslashit(string $pathOrURI) : string

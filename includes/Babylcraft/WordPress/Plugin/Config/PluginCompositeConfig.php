@@ -14,7 +14,7 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
         string $name,
         string $pluginDir,
         string $mvcNamespace,
-        array $pluginInfoList = [],
+        array $pluginInfoList,
         string $version
     ) {
 

@@ -12,6 +12,8 @@ abstract class PluginController implements IPluginController
 {
     protected $pluginAPI;
     protected $version;
+    protected $pluginDir;
+    protected $pluginURI;
     private $viewPath;
     private $viewLocationURI;
 
@@ -23,6 +25,8 @@ abstract class PluginController implements IPluginController
     {
         $this->pluginAPI = $pluginAPI;
         $this->version = $pluginConfig->getPluginVersion();
+        $this->pluginDir = $pluginConfig->getPluginDir();
+        $this->pluginURI = $pluginAPI->trailingslashit($pluginAPI->getPathURI($this->pluginDir, false));
         $this->viewPath = $pluginAPI->trailingslashit($pluginConfig->getViewPath());
         $this->selfRegisterHooks();
     }
