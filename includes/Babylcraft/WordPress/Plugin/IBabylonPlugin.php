@@ -3,22 +3,25 @@ namespace Babylcraft\WordPress\Plugin;
 
 use Babylcraft\WordPress\PluginAPI;
 use Babylcraft\WordPress\MVC\IControllerContainer;
+use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
 interface IBabylonPlugin
 {
-    public const SERVICE_KEY_PLUGIN_API = "Babyl_Plugin_API";
+    public function hydrate(IPluginSingleConfig $pluginConfig);
 
-  /*
-   * Activate the plugin
-   */
-    public static function activate();
+    /*
+    * Activate the plugin
+    */
+    public function activate();
 
-  /*
-   * Deactivate the plugin
-   */
-    public static function deactivate();
+    /*
+    * Deactivate the plugin
+    */
+    public function deactivate();
 
-    public function getPluginAPI() : PluginAPI;
-
-    public function getControllerContainer() : IControllerContainer;
+    public function isActive() : bool;
+    public function getPluginName() : string;
+    public function getPluginVersion() : string;
+    public function getLibPath() : string;
+    public function getViewPath() : string;
 }

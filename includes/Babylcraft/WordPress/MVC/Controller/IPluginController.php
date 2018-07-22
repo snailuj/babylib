@@ -2,10 +2,10 @@
 
 namespace Babylcraft\WordPress\MVC\Controller;
 
-use Babylcraft\WordPress\PluginAPI;
-use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
+use Babylcraft\WordPress\Plugin\IBabylonPlugin;
+use Babylcraft\WordPress\MVC\Controller\Config\IControllerConfig;
 
 interface IPluginController
 {
-    public function configure(PluginAPI $pluginAPI, IPluginSingleConfig $pluginConfig);
+    public function configure(IBabylonPlugin $plugin, string $controllerName);
 }

@@ -1,13 +1,15 @@
 <?php
 namespace Babylcraft\WordPress\Plugin\Config;
 
-interface IPluginSingleConfig
+use Babylcraft\WordPress\MVC\Controller\Config\IControllerConfig;
+
+interface IPluginSingleConfig extends IControllerConfig
 {
+    public function isActive() : bool;
     public function getPluginName() : string;
     public function getPluginVersion() : string;
-    public function getControllerNames() : array;
     public function getLibPath() : string;
     public function getViewPath() : string;
     public function getPluginDir() : string;
-    public function getMVCNamespace() : string;
+    public function getPluginFilePathRelative() : string;
 }

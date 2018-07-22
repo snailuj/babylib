@@ -3,6 +3,7 @@
 namespace Babylcraft\WordPress\MVC\Controller;
 
 use Babylcraft\WordPress\PluginAPI;
+use Babylcraft\WordPress\Plugin\IBabylonPlugin;
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
 /**
@@ -11,34 +12,25 @@ use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
  */
 abstract class HTMLPluginController extends PluginController
 {
-    private $libPath;
-    private $libLocationURI;
-
     /**
      * Create a new Controller, passing in dependencies
      * @param PluginAPI   object for hooking into WordPress events
      */
-    public function configure(
-        PluginAPI $pluginAPI,
-        IPluginSingleConfig $pluginConfig
-    ) {
-        parent::configure($pluginAPI, $pluginConfig);
-        $this->libPath = $pluginAPI->trailingslashit($pluginConfig->getLibPath());
+    public function configure(IBabylonPlugin $plugin, string $controllerName)
+    {
+        parent::configure($plugin, $controllerName);
     }
+
+    //view scripts are loaded with higher priority than "other" scripts
+    //create empty fn if you don't want to enqueue any scripts
+    abstract protected function enqueueViewScripts();
+
+    //create empty fn if you don't want to enqueue any scripts
+    abstract protected function enqueueOtherScripts();
 
     protected function selfRegisterHooks()
     {
-        $this->pluginAPI->addAction(
-            'admin_init',
-            function () {
-                $this->libLocationURI = $this->pluginAPI->trailingslashit($this->pluginAPI->getPathURI(
-                    $this->libPath,
-                    false
-                ));
-            }
-        );
-
-        $this->pluginAPI->addAction(
+        $this->plugin->addAction(
             'admin_enqueue_scripts',
             function () {
                 $this->enqueueOtherScripts();
@@ -46,7 +38,7 @@ abstract class HTMLPluginController extends PluginController
             10
         );
 
-        $this->pluginAPI->addAction(
+        $this->plugin->addAction(
             'admin_enqueue_scripts',
             function () {
                 $this->enqueueViewScripts();
@@ -55,57 +47,6 @@ abstract class HTMLPluginController extends PluginController
         );
         
         parent::selfRegisterHooks();
-    }
-
-    //TODO do we need multiple View directories?
-    //Only if we might have multiple Controllers in a plugin
-    //If not remove this override
-    protected function getViewLocation() : string
-    {
-        return $this->pluginAPI->trailingslashit("{$this->getViewPath()}{$this->getControllerName()}");
-    }
-
-   /*
-    * Returns the full path and name of the view markup/PHP script.
-    * This can then be require_once'd by controller functions to render
-    * a given view.
-    *
-    * By convention the view markup is assumed to be in the path returned
-    * from $this->getViewLocation() and named $viewName.php
-    *
-    * @param $viewName   The view name to get markup for
-    */
-    protected function getViewMarkupFile(string $viewName) : string
-    {
-        return "{$this->getViewLocation()}${viewName}.php";
-    }
-
-    protected function enqueueLibScript(string $libName, string $dependencies = null)
-    {
-        $this->enqueueScript(
-            $this->getScriptHandle($libName),
-            "{$this->getLibLocationURI()}{$libName}/{$libName}.js",
-            $dependencies
-        );
-    }
-    
-    protected function enqueueLibStyle(string $libName)
-    {
-        $this->enqueueStyle(
-            $this->getViewStyleHandle($libName),
-            "{$this->getLibLocationURI()}{$libName}/{$libName}.css"
-        );
-    }
-
-    protected function getLibLocationURI() : string
-    {
-        if (null == $this->libLocationURI) {
-            throw new \BadMethodCallException(
-                "viewLocationURI is not available yet because 'admin_init' hook has not fired"
-            );
-        }
-
-        return $this->libLocationURI;
     }
 
     const ERROR_NOT_PERMITTED = 1;
@@ -121,7 +62,7 @@ abstract class HTMLPluginController extends PluginController
                 $message .= 'missing data from request';
                 break;
             default:
-                $pluginAPI->logMessage("Unknown error code $errorCode", __FILE__, __LINE__);
+                $this->plugin->logMessage("Unknown error code $errorCode", __FILE__, __LINE__);
                 $message .= "unknown error $errorCode";
         }
 

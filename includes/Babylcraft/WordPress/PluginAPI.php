@@ -3,44 +3,44 @@ namespace Babylcraft\WordPress;
 
 //refactor me: core classes should not depend on specific plugins
 use Babylcraft\Plugin\IBabylonPlugin;
+
+use DownShift\WordPress\EventEmitter;
 use DownShift\Wordpress\EventEmitterInterface;
 
-//todo refactor to use interfaces so client classes are more testable
-
 /**
- * Class PluginAPI
+ * Trait PluginAPI
  *
  * Handles interactions with the WordPress Plugin API
  *
  * @package Babylcraft\WordPress
  */
-class PluginAPI
+trait PluginAPI
 {
-    private $eventEmitter;
-
-  //don't call this function except when bootstrapping your plugin
-  //at which point you should stuff it into Pimple
-  //use getHookManager() instead
-    public function __construct(EventEmitterInterface $eventEmitter)
+    private static $eventEmitter;
+    private static function getEventEmitter() : EventEmitterInterface
     {
-        $this->eventEmitter = $eventEmitter;
+        if (!self::$eventEmitter) {
+            self::$eventEmitter = new EventEmitter();
+        }
+
+        return self::$eventEmitter;
     }
 
-  /**
-   * Add a hook through plugins API service
-   *
-   * @param string $hookName  Name of the hook
-   * @param $hookFn           The hook function to run
-   * @param int $priority
-   * @param int $acceptedArgs
-   */
+    /**
+     * Add a hook through plugins API service
+     *
+     * @param string $hookName  Name of the hook
+     * @param $hookFn           The hook function to run
+     * @param int $priority
+     * @param int $acceptedArgs
+     */
     public function addAction(
         string $hookName,
         $hookFn,
         int $priority = 10,
         int $acceptedArgs = 1
     ) {
-        $this->eventEmitter->on(
+        self::getEventEmitter()->on(
             $hookName,
             $hookFn,
             $priority,
@@ -62,7 +62,7 @@ class PluginAPI
         int $priority = 10,
         int $acceptedArgs = 1
     ) {
-        $this->eventEmitter->filter(
+        self::getEventEmitter()->filter(
             $hookName,
             $filterFn,
             $priority,
@@ -120,39 +120,33 @@ class PluginAPI
         return wp_localize_script($handle, $settingsName, $settings);
     }
 
-  //avoid calling these statically except for debugging purposes
+    public static function registerActivationHook(string $file, $hookFn) {
+        register_activation_hook($file, $hookFn);
+    }
+
+    public static function registerDeactivationHook(string $file, $hookFn) {
+        register_deactivation_hook($file, $hookFn);
+    }
+
+    public static function isBabylonPluginActive(string $pluginName) : bool {
+        $pluginLocation = "{$pluginName}/{$pluginName}.php";
+        return in_array($pluginLocation, get_option('active_plugins', []));
+    }
+
     public static function logContent(string $message, $content, $fileName = '', $lineNum = '')
     {
-        error_log("TEST");
-        if (true == WP_DEBUG) {
-            if (is_array($content) || is_object($content)) {
-                PluginAPI::logMessage("{$message}: \n". print_r($content, true), $fileName, $lineNum);
-            } else {
-                PluginAPI::logMessage("{$message}: \n{$content}");
-            }
+        if (is_array($content) || is_object($content)) {
+            PluginAPI::logMessage("{$message}: ". print_r($content, true), $fileName, $lineNum);
+        } else {
+            PluginAPI::logMessage("{$message}: {$content}", $fileName, $lineNum);
         }
     }
 
     public static function logMessage(string $message, $fileName = '', $lineNum = '')
     {
-        $date = new \DateTime("now", new \DateTimeZone("Pacific/Auckland"));
-
         error_log(
-            "\n\n-------Babylon begin-------"
-            ."\n{$date->format('d/m/Y h:i:s a')}: $message\n"
-            .($fileName ? "at $fileName" : '') . ($lineNum ? ": $lineNum" : '') ."\n"
-            ."-------Babylon end-------\n\n"
+            $message
+            .($fileName ? "\nat $fileName" : '') . ($lineNum ? ": $lineNum" : '') ."\n"
         );
     }
-
-  /**
-   * @return EventEmitterInterface
-   */
-  // private static function getHookManager() : PluginAPI {
-  //   assert(
-  //     function_exists('babylGetServices'),
-  //     AssertionError('global fn babylGetServices() does not exist'));
-
-  //   return babylGetServices()[IBabylonPlugin::SERVICE_KEY_PLUGIN_API];
-  // }
 }
