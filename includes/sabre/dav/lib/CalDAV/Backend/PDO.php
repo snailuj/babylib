@@ -7,6 +7,7 @@ use Sabre\DAV;
 use Sabre\DAV\Exception\Forbidden;
 use Sabre\DAV\Xml\Element\Sharee;
 use Sabre\VObject;
+use Sabre\VObject\Component;
 
 /**
  * PDO CalDAV backend
@@ -555,7 +556,7 @@ SQL
      *
      * @param mixed $calendarId
      * @param string $objectUri
-     * @param string $calendarData
+     * @param mixed $calendarData   Accepts either a string or a VObject
      * @return string|null
      */
     function createCalendarObject($calendarId, $objectUri, $calendarData) {
@@ -627,19 +628,27 @@ SQL
      * calendar-queries.
      *
      * Returns an array with the following keys:
-     *   * etag - An md5 checksum of the object without the quotes.
+     *   * etag - An md5 checksum of the object without the quotes. This is obtained
+     *              by calling __toString() on the $calendarData if it is a VObject
      *   * size - Size of the object in bytes
      *   * componentType - VEVENT, VTODO or VJOURNAL
      *   * firstOccurence
      *   * lastOccurence
      *   * uid - value of the UID property
      *
-     * @param string $calendarData
+     * @param mixed $calendarData   if a string, will be read into a VObject
+     *                              if a VObject, will be used as-is
      * @return array
      */
     protected function getDenormalizedData($calendarData) {
-
-        $vObject = VObject\Reader::read($calendarData);
+        if ($calendarData instanceof string) {
+            $vObject = VObject\Reader::read($calendarData);
+        } else if ($calendarData instanceof Component) {
+            $vObject = $calendarData;
+        } else {
+            throw new \InvalidArgumentException("calendarData must be a string or a VObject");
+        }
+        
         $componentType = null;
         $component = null;
         $firstOccurence = null;
