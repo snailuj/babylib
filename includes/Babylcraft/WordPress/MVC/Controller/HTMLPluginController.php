@@ -28,6 +28,8 @@ abstract class HTMLPluginController extends PluginController
     //create empty fn if you don't want to enqueue any scripts
     abstract protected function enqueueOtherScripts();
 
+    abstract protected function getControllerName() : string;
+
     protected function selfRegisterHooks()
     {
         $this->plugin->addAction(
@@ -67,5 +69,25 @@ abstract class HTMLPluginController extends PluginController
         }
 
         wp_send_json_error(["message" => $message]);
+    }
+
+    protected function enqueueViewStyle(string $styleName) : string 
+    {
+        return $this->plugin->enqueueViewStyle($this->getControllerName(), $styleName);
+    }
+
+    protected function enqueueViewScript(string $viewName) : string 
+    {
+        return $this->plugin->enqueueViewScript($this->getControllerName(), $viewName);
+    }
+
+    protected function getViewScriptHandle(string $viewName) : string
+    {
+        return $this->plugin->getScriptHandle($this->getControllerName(), $viewName);
+    }
+
+    protected function getViewMarkup(string $viewName) : string
+    {
+        return $this->plugin->getViewMarkup($this->getControllerName(), $viewName);
     }
 }

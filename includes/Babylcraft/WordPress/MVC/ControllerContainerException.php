@@ -5,8 +5,8 @@ use Babylcraft\BabylonException;
 
 class ControllerContainerException extends BabylonException
 {
-    const ERROR_NO_SUCH_CLASS = 0;
-    const ERROR_NOT_A_CONTROLLER = 1;
+    const ERROR_NO_SUCH_CLASS = 0x1;
+    const ERROR_NOT_A_CONTROLLER = 0x2;
 
     protected function codeToMessage(int $code, $context) : string
     {

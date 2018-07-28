@@ -3,7 +3,7 @@
     "description" : "Plugin MVC framework with helpful additions",
     "keywords" : [ "wordpress", "bookings", "babylcraft" ],
     "license" : "GPL-2.0+",
-    "version" : "0.1.0",
+    "version" : "0.1.2",
     "authors" : [
         {
             "name" : "Julian Suggate",
@@ -13,7 +13,7 @@
         {
             "name" : "Leo Suggate",
             "email" : "leo@parallelconsciousness.com",
-            "role" : "Young Nervous Brain"
+            "role" : "Young Ferrari Brain"
         }
     ],
     "require" : {
@@ -25,7 +25,15 @@
         "sort-packages": true
     },
     "autoload": {
-      "psr-4": {"Babylcraft\\": "includes/Babylcraft/"}
+      "psr-4": {
+          "Babylcraft\\"     : "includes/Babylcraft/",
+          "Sabre\\DAV\\"     : "includes/sabre/dav/lib/DAV/",
+          "Sabre\\DAVACL\\"  : "includes/sabre/dav/lib/DAVACL/",
+          "Sabre\\CalDAV\\"  : "includes/sabre/dav/lib/CalDAV/",
+          "Sabre\\CardDAV\\" : "includes/sabre/dav/lib/CardDAV/",
+          "Sabre\\VObject\\" : "includes/sabre/vobject/lib/",
+          "Sabre\\Xml\\"     : "includes/sabre/xml/lib/"
+        }
     },
     "support": {
         "issues": "https://bitbucket.org/babylcraft/babylib/issues?status=new&status=open",

@@ -10,6 +10,7 @@ use Babylcraft\WordPress\MVC\ControllerContainerException;
 use Babylcraft\WordPress\MVC\Controller\IPluginController;
 
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
+use Babylcraft\WordPress\Plugin\Config\PluginConfigurationException;
 
 
 abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
@@ -39,25 +40,34 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
     private $viewURI;
     public function hydrate(IPluginSingleConfig $config)
     {
-        $this->config = $config;        
-        $this->registerSymlinkPlugin($config->getPluginDir()); //works if plugin isn't symlinked too
+        $this->config = $config;
+        $this->registerSymlinkPlugin($this->config->getPluginDir()); //works if plugin isn't symlinked too
         $this->registerActivationHook(
-            $config->getPluginFilePathRelative(),
+            $this->config->getPluginFilePathRelative(),
             function() {
                 $this->activate();
             }
         );
 
         $this->registerDeactivationHook(
-            $config->getPluginFilePathRelative(),
+            $this->config->getPluginFilePathRelative(),
             function() {
                 $this->deactivate();
             }
         );
 
+        if (!$config->isActive()) {
+            return; //play nicely if not activated
+        }
+
+        $this->doHydrate();
+    }
+
+    protected function doHydrate()
+    {
         $controllers = new Container();
-        $controllerNames = $config->getControllerNames();
-        $mvcNamespace = $config->getMVCNamespace();
+        $controllerNames = $this->config->getControllerNames();
+        $mvcNamespace = $this->config->getMVCNamespace();
         $mvcNamespace = $mvcNamespace ? "{$mvcNamespace}" : "";
         foreach ($controllerNames as $controllerName) {
             $controllerClass = "{$mvcNamespace}\\Controller\\{$controllerName}";
@@ -83,8 +93,39 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
         }
     }
 
-    abstract public function activate();
-    abstract public function deactivate();
+    public function activate()
+    {
+        if ($this->config->isActive()) {
+            throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_ACTIVE, $this);
+        }
+
+        if ($this->isDebug()) {
+            $this->logMessage($this->config->getPluginName() ." activated ");
+        }
+
+        $this->doActivate();
+    }
+
+    public function deactivate()
+    {
+        if (!$this->config->isActive()) {
+            throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_INACTIVE, $this);
+        }
+
+        if ($this->isDebug()) {
+            $this->logMessage($this->config->getPluginName() ." deactivated ");
+        }
+
+        $this->doDeactivate();
+    }
+
+    abstract protected function doActivate();
+    abstract protected function doDeactivate();
+
+    public function getVersion() : string 
+    {
+        return $this->config->getPluginVersion();
+    }
 
     public function getPluginURI() : string 
     {
@@ -105,16 +146,6 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
 
         return $libURI;
     }
-
-    public function createNonce(string $handle) : string
-    {
-        return $this->plugin->createNonce($handle);
-    }
-
-    public function localizeScript(string $handle, string $settingsName = 'settings', array $settings = [])
-    {
-        return $this->plugin->localizeScript($handle, $settingsName, $settings);
-    }
     
     /*
     * Returns the full path and name of the view markup/PHP script.
@@ -126,7 +157,7 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
     *
     * @param $viewName   The view name to get markup for
     */
-    public function getViewMarkupFile(string $controllerName, string $viewName) : string
+    public function getViewMarkup(string $controllerName, string $viewName) : string
     {
         return "{$this->getViewLocation($controllerName, $viewName)}${viewName}.php";
     }

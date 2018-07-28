@@ -70,6 +70,14 @@ trait PluginAPI
         );
     }
 
+    public function getOption(string $optionName) {
+        return get_option($optionName);
+    }
+
+    public function isDebug() : bool {
+        return defined('WP_DEBUG');
+    }
+
     public function isAdminDashboard() : bool
     {
         if (function_exists('get_current_screen')) {
