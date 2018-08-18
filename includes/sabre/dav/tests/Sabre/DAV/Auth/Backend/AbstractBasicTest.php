@@ -1,14 +1,14 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\Auth\Backend;
 
 use Sabre\HTTP;
 
-class AbstractBasicTest extends \PHPUnit_Framework_TestCase {
+class AbstractBasicTest extends \PHPUnit\Framework\TestCase {
 
     function testCheckNoHeaders() {
 
-        $request = new HTTP\Request();
+        $request = new HTTP\Request('GET', '/');
         $response = new HTTP\Response();
 
         $backend = new AbstractBasicMock();
@@ -22,8 +22,10 @@ class AbstractBasicTest extends \PHPUnit_Framework_TestCase {
     function testCheckUnknownUser() {
 
         $request = HTTP\Sapi::createFromServerArray([
-            'PHP_AUTH_USER' => 'username',
-            'PHP_AUTH_PW'   => 'wrongpassword',
+            'REQUEST_METHOD' => 'GET',
+            'REQUEST_URI'    => '/',
+            'PHP_AUTH_USER'  => 'username',
+            'PHP_AUTH_PW'    => 'wrongpassword',
         ]);
         $response = new HTTP\Response();
 
@@ -38,8 +40,10 @@ class AbstractBasicTest extends \PHPUnit_Framework_TestCase {
     function testCheckSuccess() {
 
         $request = HTTP\Sapi::createFromServerArray([
-            'PHP_AUTH_USER' => 'username',
-            'PHP_AUTH_PW'   => 'password',
+            'REQUEST_METHOD' => 'GET',
+            'REQUEST_URI'    => '/',
+            'PHP_AUTH_USER'  => 'username',
+            'PHP_AUTH_PW'    => 'password',
         ]);
         $response = new HTTP\Response();
 
@@ -53,7 +57,7 @@ class AbstractBasicTest extends \PHPUnit_Framework_TestCase {
 
     function testRequireAuth() {
 
-        $request = new HTTP\Request();
+        $request = new HTTP\Request('GET', '/');
         $response = new HTTP\Response();
 
         $backend = new AbstractBasicMock();
@@ -61,7 +65,7 @@ class AbstractBasicTest extends \PHPUnit_Framework_TestCase {
         $backend->challenge($request, $response);
 
         $this->assertEquals(
-            'Basic realm="writing unittests on a saturday night"',
+            'Basic realm="writing unittests on a saturday night", charset="UTF-8"',
             $response->getHeader('WWW-Authenticate')
         );
 

@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Subscriptions;
 
 use Sabre\DAV\PropPatch;
 use Sabre\DAV\Xml\Property\Href;
 
-class SubscriptionTest extends \PHPUnit_Framework_TestCase {
+class SubscriptionTest extends \PHPUnit\Framework\TestCase {
 
     protected $backend;
 

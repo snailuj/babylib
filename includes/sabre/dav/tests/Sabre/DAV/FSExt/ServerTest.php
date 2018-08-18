@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\FSExt;
 
@@ -27,7 +27,7 @@ class ServerTest extends DAV\AbstractServer{
             'X-Sabre-Version' => [DAV\Version::VERSION],
             'Content-Type'    => ['application/octet-stream'],
             'Content-Length'  => [13],
-            'Last-Modified'   => [HTTP\Util::toHTTPDate(new \DateTime('@' . filemtime($filename)))],
+            'Last-Modified'   => [HTTP\toDate(new \DateTime('@' . filemtime($filename)))],
             'ETag'            => ['"' . sha1(fileinode($filename) . filesize($filename) . filemtime($filename)) . '"'],
             ],
             $this->response->getHeaders()
@@ -49,7 +49,7 @@ class ServerTest extends DAV\AbstractServer{
             'X-Sabre-Version' => [DAV\Version::VERSION],
             'Content-Type'    => ['application/octet-stream'],
             'Content-Length'  => [13],
-            'Last-Modified'   => [HTTP\Util::toHTTPDate(new \DateTime('@' . filemtime($this->tempDir . '/test.txt')))],
+            'Last-Modified'   => [HTTP\toDate(new \DateTime('@' . filemtime($this->tempDir . '/test.txt')))],
             'ETag'            => ['"' . sha1(fileinode($filename) . filesize($filename) . filemtime($filename)) . '"'],
             ],
             $this->response->getHeaders()
@@ -241,6 +241,27 @@ class ServerTest extends DAV\AbstractServer{
         $this->assertTrue(
             is_dir($this->tempDir . '/tree2/tree1')
         );
+
+    }
+
+    function testCopy() {
+
+        mkdir($this->tempDir . '/testcol');
+
+        $request = new HTTP\Request('COPY', '/test.txt', ['Destination' => '/testcol/test2.txt']);
+        $this->server->httpRequest = ($request);
+        $this->server->exec();
+
+        $this->assertEquals(201, $this->response->status);
+        $this->assertEquals('', $this->response->body);
+
+        $this->assertEquals([
+            'Content-Length'  => ['0'],
+            'X-Sabre-Version' => [DAV\Version::VERSION],
+        ], $this->response->getHeaders());
+
+        $this->assertTrue(is_file($this->tempDir . '/test.txt'));
+        $this->assertTrue(is_file($this->tempDir . '/testcol/test2.txt'));
 
     }
 }

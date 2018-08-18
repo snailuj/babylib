@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
@@ -6,7 +6,7 @@ use Sabre\DAV;
 use Sabre\DAVACL;
 use Sabre\HTTP;
 
-abstract class AbstractPluginTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractPluginTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @var Sabre\CardDAV\Plugin

@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class ServerUpdatePropertiesTest extends \PHPUnit_Framework_TestCase {
+class ServerUpdatePropertiesTest extends \PHPUnit\Framework\TestCase {
 
     function testUpdatePropertiesFail() {
 

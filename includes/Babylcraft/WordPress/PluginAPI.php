@@ -6,6 +6,7 @@ use Babylcraft\Plugin\IBabylonPlugin;
 
 use DownShift\WordPress\EventEmitter;
 use DownShift\Wordpress\EventEmitterInterface;
+use Babylcraft\Babylon;
 
 /**
  * Trait PluginAPI
@@ -48,14 +49,14 @@ trait PluginAPI
         );
     }
 
-  /**
-   * Add a filter through plugins API service
-   *
-   * @param string $hookName  Name of the hook
-   * @param $filterFn         The filter function to run
-   * @param int $priority
-   * @param int $acceptedArgs
-   */
+    /**
+     * Add a filter through plugins API service
+     *
+     * @param string $hookName  Name of the hook
+     * @param $filterFn         The filter function to run
+     * @param int $priority
+     * @param int $acceptedArgs
+     */
     public function addFilter(
         string $hookName,
         $filterFn,
@@ -109,7 +110,6 @@ trait PluginAPI
         //plugin_dir_url always takes the parent dir of whatever's passed
         //in so use placeholder text to stay in the given dir if $useParent = false
         $path .= $useParent ? "" : '/placeholdertext';
-        PluginAPI::logMessage("using ". $path .", returning ". plugin_dir_url($path));
         return plugin_dir_url($path);
     }
 
@@ -141,17 +141,62 @@ trait PluginAPI
         return in_array($pluginLocation, get_option('active_plugins', []));
     }
 
-    public static function logContent(string $message, $content, $fileName = '', $lineNum = '')
+    public static function debug(string $message, $fileName = '', $lineNum = '')
+    {
+        static::logMessage($message, Babylon::LOG_DEBUG, $fileName, $lineNum);
+    }
+
+    public static function info(string $message, $fileName = '', $lineNum = '')
+    {
+        static::logMessage($message, Babylon::LOG_INFO, $fileName, $lineNum);
+    }
+
+    public static function warn(string $message, $fileName = '', $lineNum = '')
+    {
+        static::logMessage($message, Babylon::LOG_WARN, $fileName, $lineNum);
+    }
+
+    public static function error(string $message, $fileName = '', $lineNum = '')
+    {
+        static::logMessage($message, Babylon::LOG_ERROR, $fileName, $lineNum);
+    }
+
+    public static function debugContent($content, string $message = '', $fileName = '', $lineNum = '')
+    {
+        static::logContent($message, Babylon::LOG_DEBUG, $content, $fileName, $lineNum);
+    }
+
+    public static function infoContent($content, string $message = '', $fileName = '', $lineNum = '')
+    {
+        static::logContent($message, Babylon::LOG_INFO, $content, $fileName, $lineNum);
+    }
+
+    public static function warnContent($content, string $message = '', $fileName = '', $lineNum = '')
+    {
+        static::logContent($message, Babylon::LOG_WARN, $content, $fileName, $lineNum);
+    }
+
+    public static function errorContent($content, string $message = '', $fileName = '', $lineNum = '')
+    {
+        static::logContent($message, Babylon::LOG_ERROR, $content, $fileName, $lineNum);
+    }
+
+    public static function logContent(string $message, int $logLevel, $content, $fileName = '', $lineNum = '')
     {
         if (is_array($content) || is_object($content)) {
-            PluginAPI::logMessage("{$message}: ". print_r($content, true), $fileName, $lineNum);
+            static::logMessage("{$message}: ". print_r($content, true), $logLevel, $fileName, $lineNum);
         } else {
-            PluginAPI::logMessage("{$message}: {$content}", $fileName, $lineNum);
+            static::logMessage("{$message}: {$content}", $logLevel, $fileName, $lineNum);
         }
     }
 
-    public static function logMessage(string $message, $fileName = '', $lineNum = '')
+    public static function logMessage(string $message, int $logLevel, $fileName = '', $lineNum = '')
     {
+        if (function_exists("babylGetServices") && $logLevel < babylGetServices()[Babylon::KEY_LOG_LEVEL]) {
+            return;
+        }
+
+        //if no config found then just log away happily
         error_log(
             $message
             .($fileName ? "\nat $fileName" : '') . ($lineNum ? ": $lineNum" : '') ."\n"

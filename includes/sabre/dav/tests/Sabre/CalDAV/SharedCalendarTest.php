@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\DAV\Sharing;
 use Sabre\DAV\Xml\Element\Sharee;
 
-class SharedCalendarTest extends \PHPUnit_Framework_TestCase {
+class SharedCalendarTest extends \PHPUnit\Framework\TestCase {
 
     protected $backend;
 

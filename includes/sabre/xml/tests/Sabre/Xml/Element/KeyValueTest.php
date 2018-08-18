@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Element;
 
 use Sabre\Xml\Reader;
 use Sabre\Xml\Writer;
 
-class KeyValueTest extends \PHPUnit_Framework_TestCase {
+class KeyValueTest extends \PHPUnit\Framework\TestCase {
 
     function testDeserialize() {
 

@@ -1,35 +1,45 @@
 language: php
 php:
-  - 5.5
-  - 5.6
   - 7.0
   - 7.1
-
+  - 7.2
 
 env:
+  global:
+    - SABRE_MYSQLUSER="root"
+    - SABRE_MYSQLPASS=""
+    - SABRE_MYSQLDSN="mysql:host=127.0.0.1;dbname=sabredav_test"
   matrix:
-    - LOWEST_DEPS="" TEST_DEPS=""
-    - LOWEST_DEPS="--prefer-lowest" TEST_DEPS="tests/Sabre/"
+    - LOWEST_DEPS="" TEST_DEPS="" WITH_COVERAGE="--coverage-clover=coverage.xml"
+    - LOWEST_DEPS="--prefer-lowest" TEST_DEPS="tests/Sabre/" $WITH_COVERAGE=""
 
 services:
   - mysql
   - postgresql
 
+
 sudo: false
 
 before_script:
-  - mysql -e 'create database sabredav_test'
+#  - mysql -u root -h 127.0.0.1 sabredav_test -e 'SELECT VERSION();'
+#- mysql -u root -h 127.0.0.1 -e 'create database sabredav_test'
   - psql -c "create database sabredav_test" -U postgres
   - psql -c "create user sabredav with PASSWORD 'sabredav';GRANT ALL PRIVILEGES ON DATABASE sabredav_test TO sabredav" -U postgres
-  #  - composer self-update
   - composer update --prefer-dist $LOWEST_DEPS
 
-# addons:
-#    postgresql: "9.5"
+# Required for postgres 9.5
+dist: trusty
+
+addons:
+   postgresql: "9.5"
 
 script:
-  - ./bin/phpunit --configuration tests/phpunit.xml.dist $TEST_DEPS
+  - ./bin/phpunit --verbose --configuration tests/phpunit.xml.dist $WITH_COVERAGE $TEST_DEPS
+  - rm -f ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
   - ./bin/sabre-cs-fixer fix . --dry-run --diff
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 
 cache:
   directories:

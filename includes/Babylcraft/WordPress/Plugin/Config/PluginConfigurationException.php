@@ -16,7 +16,7 @@ class PluginConfigurationException extends BabylonException
                 $message = "Controller directory $context not found";
                 break;
             case $this::ERROR_PLUGIN_ALREADY_ACTIVE:
-                $message = "$context::activate() called but plugin is already activated";
+                $message = "::activate() called but plugin is already activated";
                 break;
             default:
                 "matching unknown error code $code";

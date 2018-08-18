@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml;
 
-class WriterTest extends \PHPUnit_Framework_TestCase {
+class WriterTest extends \PHPUnit\Framework\TestCase {
 
     protected $writer;
 

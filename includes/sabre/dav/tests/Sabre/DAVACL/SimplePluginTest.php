@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL;
 
@@ -8,7 +8,7 @@ use Sabre\HTTP;
 require_once 'Sabre/DAVACL/MockPrincipal.php';
 require_once 'Sabre/DAVACL/MockACLNode.php';
 
-class SimplePluginTest extends \PHPUnit_Framework_TestCase {
+class SimplePluginTest extends \PHPUnit\Framework\TestCase {
 
     function testValues() {
 
@@ -153,7 +153,7 @@ class SimplePluginTest extends \PHPUnit_Framework_TestCase {
         $server->addPlugin($auth);
 
         //forcing login
-        $auth->beforeMethod(new HTTP\Request(), new HTTP\Response());
+        $auth->beforeMethod(new HTTP\Request('GET', '/'), new HTTP\Response());
 
         $this->assertEquals(['principals/admin'], $acl->getCurrentUserPrincipals());
 
@@ -181,7 +181,7 @@ class SimplePluginTest extends \PHPUnit_Framework_TestCase {
         $server->addPlugin($auth);
 
         //forcing login
-        $auth->beforeMethod(new HTTP\Request(), new HTTP\Response());
+        $auth->beforeMethod(new HTTP\Request('GET', '/'), new HTTP\Response());
 
         $expected = [
             'principals/admin',
@@ -260,7 +260,7 @@ class SimplePluginTest extends \PHPUnit_Framework_TestCase {
         $server->addPlugin($auth);
 
         //forcing login
-        $auth->beforeMethod(new HTTP\Request(), new HTTP\Response());
+        $auth->beforeMethod(new HTTP\Request('GET', '/'), new HTTP\Response());
 
         $expected = [
             '{DAV:}write',

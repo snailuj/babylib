@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class SimpleFileTest extends \PHPUnit_Framework_TestCase {
+class SimpleFileTest extends \PHPUnit\Framework\TestCase {
 
     function testAll() {
 

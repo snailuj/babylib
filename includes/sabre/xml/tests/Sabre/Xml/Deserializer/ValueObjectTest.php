@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
-namespace Sabre\XML\Deserializer;
+namespace Sabre\Xml\Deserializer;
 
 use
     Sabre\Xml\Reader;
 
-class ValueObjectTest extends \PHPUnit_Framework_TestCase {
+class ValueObjectTest extends \PHPUnit\Framework\TestCase {
 
     function testDeserializeValueObject() {
 

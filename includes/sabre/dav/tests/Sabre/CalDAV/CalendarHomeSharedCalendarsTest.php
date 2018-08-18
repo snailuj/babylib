@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\DAV;
 
-class CalendarHomeSharedCalendarsTest extends \PHPUnit_Framework_TestCase {
+class CalendarHomeSharedCalendarsTest extends \PHPUnit\Framework\TestCase {
 
     protected $backend;
 

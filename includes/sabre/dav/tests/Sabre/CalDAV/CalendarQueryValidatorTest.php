@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\VObject;
 
-class CalendarQueryValidatorTest extends \PHPUnit_Framework_TestCase {
+class CalendarQueryValidatorTest extends \PHPUnit\Framework\TestCase {
 
     function testTopLevelFail() {
 

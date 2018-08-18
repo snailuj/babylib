@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
 use Sabre\DAV;
 
-class IDirectoryTest extends \PHPUnit_Framework_TestCase {
+class IDirectoryTest extends \PHPUnit\Framework\TestCase {
 
     function testResourceType() {
 

@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL;
 
-class PrincipalCollectionTest extends \PHPUnit_Framework_TestCase {
+class PrincipalCollectionTest extends \PHPUnit\Framework\TestCase {
 
     function testBasic() {
 

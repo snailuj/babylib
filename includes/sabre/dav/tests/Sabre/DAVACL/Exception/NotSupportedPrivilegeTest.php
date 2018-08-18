@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL\Exception;
 
 use Sabre\DAV;
 
-class NotSupportedPrivilegeTest extends \PHPUnit_Framework_TestCase {
+class NotSupportedPrivilegeTest extends \PHPUnit\Framework\TestCase {
 
     function testSerialize() {
 

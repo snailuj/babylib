@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class TreeTest extends \PHPUnit_Framework_TestCase {
+class TreeTest extends \PHPUnit\Framework\TestCase {
 
     function testNodeExists() {
 
@@ -22,6 +22,22 @@ class TreeTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals('foobar', $tree->getNodeForPath('hi/file')->get());
         $this->assertEquals(['test1' => 'value'], $tree->getNodeForPath('hi/file')->getProperties([]));
 
+    }
+
+    function testCopyFile() {
+
+        $tree = new TreeMock();
+        $tree->copy('hi/file', 'hi/newfile');
+
+        $this->assertArrayHasKey('newfile', $tree->getNodeForPath('hi')->newFiles);
+    }
+
+    function testCopyFile0() {
+
+        $tree = new TreeMock();
+        $tree->copy('hi/file', 'hi/0');
+
+        $this->assertArrayHasKey('0', $tree->getNodeForPath('hi')->newFiles);
     }
 
     function testMove() {
@@ -56,8 +72,8 @@ class TreeTest extends \PHPUnit_Framework_TestCase {
 
         $tree = new TreeMock();
         $children = $tree->getChildren('');
-        $this->assertEquals(2, count($children));
-        $this->assertEquals('hi', $children[0]->getName());
+        $firstChild = $children->current();
+        $this->assertEquals('hi', $firstChild->getName());
 
     }
 

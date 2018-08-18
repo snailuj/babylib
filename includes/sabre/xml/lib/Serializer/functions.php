@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Serializer;
 
@@ -34,7 +34,6 @@ use Sabre\Xml\XmlSerializable;
  * <s:elem4>content</s:elem4>
  * <s:elem5 attr="val" />
  *
- * @param Writer $writer
  * @param string[] $values
  * @return void
  */
@@ -54,11 +53,10 @@ function enum(Writer $writer, array $values) {
  * Values that are set to null or an empty array are not serialized. To
  * serialize empty properties, you must specify them as an empty string.
  *
- * @param Writer $writer
  * @param object $valueObject
- * @param string $namespace
+ * @return void
  */
-function valueObject(Writer $writer, $valueObject, $namespace) {
+function valueObject(Writer $writer, $valueObject, string $namespace) {
     foreach (get_object_vars($valueObject) as $key => $val) {
         if (is_array($val)) {
             // If $val is an array, it has a special meaning. We need to
@@ -89,12 +87,9 @@ function valueObject(Writer $writer, $valueObject, $namespace) {
  *
  * repeatingElements($writer, $items, '{}item');
  *
- * @param Writer $writer
- * @param array $items A list of items sabre/xml can serialize.
- * @param string $childElementName Element name in clark-notation
  * @return void
  */
-function repeatingElements(Writer $writer, array $items, $childElementName) {
+function repeatingElements(Writer $writer, array $items, string $childElementName) {
 
     foreach ($items as $item) {
         $writer->writeElement($childElementName, $item);
@@ -157,7 +152,6 @@ function repeatingElements(Writer $writer, array $items, $childElementName) {
  *
  * You can even mix the two array syntaxes.
  *
- * @param Writer $writer
  * @param string|int|float|bool|array|object
  * @return void
  */
@@ -166,7 +160,7 @@ function standardSerializer(Writer $writer, $value) {
     if (is_scalar($value)) {
 
         // String, integer, float, boolean
-        $writer->text($value);
+        $writer->text((string)$value);
 
     } elseif ($value instanceof XmlSerializable) {
 

@@ -40,7 +40,7 @@ $server->addPlugin($lockPlugin);
 $browser = new \Sabre\DAV\Browser\Plugin();
 $server->addPlugin($browser);
 
-// Automatically guess (some) contenttypes, based on extesion
+// Automatically guess (some) contenttypes, based on extension
 $server->addPlugin(new \Sabre\DAV\Browser\GuessContentType());
 
 // Authentication backend
@@ -53,4 +53,4 @@ $tempFF = new \Sabre\DAV\TemporaryFileFilterPlugin($tmpDir);
 $server->addPlugin($tempFF);
 
 // And off we go!
-$server->exec();
+$server->start();

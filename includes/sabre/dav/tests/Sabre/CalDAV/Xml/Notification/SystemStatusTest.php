@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Xml\Notification;
 
 use Sabre\DAV;
 use Sabre\Xml\Writer;
 
-class SystemStatusTest extends \PHPUnit_Framework_TestCase {
+class SystemStatusTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @param array $notification

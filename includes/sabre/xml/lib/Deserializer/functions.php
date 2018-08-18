@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Deserializer;
 
@@ -52,13 +52,8 @@ use Sabre\Xml\Reader;
  *
  * Attributes will be removed from the top-level elements. If elements with
  * the same name appear twice in the list, only the last one will be kept.
- *
- *
- * @param Reader $reader
- * @param string $namespace
- * @return array
  */
-function keyValue(Reader $reader, $namespace = null) {
+function keyValue(Reader $reader, string $namespace = null) : array {
 
     // If there's no children, we don't do anything.
     if ($reader->isEmptyElement) {
@@ -133,11 +128,9 @@ function keyValue(Reader $reader, $namespace = null) {
  *   "elem5",
  * ];
  *
- * @param Reader $reader
- * @param string $namespace
  * @return string[]
  */
-function enum(Reader $reader, $namespace = null) {
+function enum(Reader $reader, string $namespace = null) : array {
 
     // If there's no children, we don't do anything.
     if ($reader->isEmptyElement) {
@@ -173,12 +166,9 @@ function enum(Reader $reader, $namespace = null) {
  * This is primarily used by the mapValueObject function from the Service
  * class, but it can also easily be used for more specific situations.
  *
- * @param Reader $reader
- * @param string $className
- * @param string $namespace
  * @return object
  */
-function valueObject(Reader $reader, $className, $namespace) {
+function valueObject(Reader $reader, string $className, string $namespace) {
 
     $valueObject = new $className();
     if ($reader->isEmptyElement) {
@@ -223,7 +213,7 @@ function valueObject(Reader $reader, $className, $namespace) {
  *    <item>...</item>
  * </collection>
  *
- * Many XML documents use  patterns like that, and this deserializer
+ * Many XML documents use patterns like that, and this deserializer
  * allow you to get all the 'items' as an array.
  *
  * In that previous example, you would register the deserializer as such:
@@ -234,11 +224,10 @@ function valueObject(Reader $reader, $className, $namespace) {
  *
  * The repeatingElements deserializer simply returns everything as an array.
  *
- * @param Reader $reader
- * @param string $childElementName Element name in clark-notation
- * @return array
+ * $childElementName must either be a a clark-notation element name, or if no
+ * namespace is used, the bare element name.
  */
-function repeatingElements(Reader $reader, $childElementName) {
+function repeatingElements(Reader $reader, string $childElementName) : array {
 
     if ($childElementName[0] !== '{') {
         $childElementName = '{}' . $childElementName;
@@ -254,5 +243,55 @@ function repeatingElements(Reader $reader, $childElementName) {
     }
 
     return $result;
+
+}
+
+/**
+ * This deserializer helps you to deserialize structures which contain mixed content like this:
+ * 
+ * <p>some text <extref>and a inline tag</extref>and even more text</p>
+ *
+ * The above example will return
+ *
+ * [
+ *     'some text',
+ *     [
+ *         'name'       => '{}extref',
+ *         'value'      => 'and a inline tag',
+ *         'attributes' => []
+ *     ],
+ *     'and even more text'
+ * ]
+ *
+ * In strict XML documents you wont find this kind of markup but in html this is a quite common pattern.
+ */
+function mixedContent(Reader $reader) : array {
+
+    // If there's no children, we don't do anything.
+    if ($reader->isEmptyElement) {
+        $reader->next();
+        return [];
+    }
+
+    $previousDepth = $reader->depth;
+
+    $content = [];
+    $reader->read();
+    while (true) {
+        if ($reader->nodeType == Reader::ELEMENT) {
+            $content[] = $reader->parseCurrentElement();
+        } elseif ($reader->depth >= $previousDepth && in_array($reader->nodeType, [Reader::TEXT, Reader::CDATA, Reader::WHITESPACE])) {
+            $content[] = $reader->value;
+            $reader->read();
+        } elseif ($reader->nodeType == Reader::END_ELEMENT) {
+            // Ensuring we are moving the cursor after the end element.
+            $reader->read();
+            break;
+        } else {
+            $reader->read();
+        }
+    }
+
+    return $content;
 
 }

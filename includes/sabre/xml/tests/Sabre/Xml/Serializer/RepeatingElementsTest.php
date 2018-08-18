@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Serializer;
 
 use Sabre\Xml\Service;
 
-class RepeatingElementsTest extends \PHPUnit_Framework_TestCase {
+class RepeatingElementsTest extends \PHPUnit\Framework\TestCase {
 
     function testSerialize() {
 

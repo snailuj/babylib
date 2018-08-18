@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Element;
 
 use Sabre\Xml\Reader;
 use Sabre\Xml\Writer;
 
-class XmlFragmentTest extends \PHPUnit_Framework_TestCase {
+class XmlFragmentTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @dataProvider xmlProvider

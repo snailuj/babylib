@@ -4,18 +4,19 @@ namespace Babylcraft\WordPress\Plugin\Config;
 use Babylcraft\WordPress\PluginAPI;
 class PluginSingleConfig implements IPluginSingleConfig
 {
-    private $name;
-    private $version;
-    private $wpPluginsDirPath;
-    private $thisPluginDirName;
-    private $mvcNamespace;
-    private $mvcDir;
-    private $isActive;
+    protected $name;
+    protected $version;
+    protected $wpPluginsDirPath;
+    protected $thisPluginDirName;
+    protected $mvcNamespace;
+    protected $mvcDir;
+    protected $isActive;
+    protected $logLevel;
 
     /*
     * @var array
     */
-    private $controllerNames = [];
+    protected $controllerNames = null;
 
     public function __construct(
         string $name,
@@ -23,19 +24,16 @@ class PluginSingleConfig implements IPluginSingleConfig
         string $thisPluginDirName,
         string $mvcNamespace,
         string $version,
-        bool $isActive
+        bool $isActive,
+        int $logLevel
     ) {
-        $this->name = $name;
-        $this->version = $version;
-        $this->wpPluginsDirPath = $wpPluginsDirPath;
-        $this->thisPluginDirName = $thisPluginDirName;
-        $this->mvcNamespace = $mvcNamespace;
-        $this->isActive = $isActive;
-
-        //if mvcnamespace is given, then look for controllers by convention
-        if ($mvcNamespace) {
-            $this->discoverControllers();
-        }
+        $this->name =               $name;
+        $this->version =            $version;
+        $this->wpPluginsDirPath =   $wpPluginsDirPath;
+        $this->thisPluginDirName =  $thisPluginDirName;
+        $this->mvcNamespace =       $mvcNamespace;
+        $this->isActive =           $isActive;
+        $this->logLevel =           $logLevel;
     }
 
     public function getLibPath() : string
@@ -53,6 +51,11 @@ class PluginSingleConfig implements IPluginSingleConfig
         return $this->isActive;
     }
 
+    public function getLogLevel() : int
+    {
+        return $this->logLevel;
+    }
+
     public function getPluginName() : string
     {
         return $this->name;
@@ -65,6 +68,10 @@ class PluginSingleConfig implements IPluginSingleConfig
 
     public function getControllerNames() : array
     {
+        if (null === $this->controllerNames) {
+            $this->discoverControllers();
+        }
+
         return $this->controllerNames;
     }
 
@@ -91,6 +98,7 @@ class PluginSingleConfig implements IPluginSingleConfig
     //that's your list of Controller names
     private function discoverControllers()
     {
+        $this->controllerNames = [];
         $controllerFrag = str_replace("\\", "/", $this->mvcNamespace);
         $this->mvcDir = "{$this->getPluginDir()}includes/{$controllerFrag}/";
         $controllerDir = "{$this->mvcDir}Controller";

@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
@@ -8,7 +8,7 @@ use Sabre\HTTP;
 
 require_once 'Sabre/HTTP/ResponseMock.php';
 
-class ValidateVCardTest extends \PHPUnit_Framework_TestCase {
+class ValidateVCardTest extends \PHPUnit\Framework\TestCase {
 
     protected $server;
     protected $cardBackend;

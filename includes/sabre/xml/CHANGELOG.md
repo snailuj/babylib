@@ -1,6 +1,29 @@
 ChangeLog
 =========
 
+2.1.1 (????-??-??)
+------------------
+
+*
+
+
+2.1.0 (2018-02-08)
+------------------
+
+* #112: Added a `mixedContent` deserializer function, which might be useful
+  if you're parsing HTML-like documents with elements that contain both text
+  and other elements as siblings. (@staabm).
+
+
+2.0.0 (2016-11-15)
+------------------
+
+* Now requires PHP 7.
+* Uses typehints everywhere.
+* Fixed some minor strict typing-related issues.
+* Removed workaround for PHP bug [64230](https://bugs.php.net/bug.php?id=64230).
+
+
 1.5.0 (2016-10-09)
 ------------------
 

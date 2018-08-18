@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class StringUtilTest extends \PHPUnit_Framework_TestCase {
+class StringUtilTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @param string $haystack

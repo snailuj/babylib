@@ -1,9 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\FS;
 
-use Sabre\DAV;
-use Sabre\HTTP\URLUtil;
+use Sabre\DAV\Exception\Forbidden;
+use Sabre\DAV\INode;
+use Sabre\Uri;
 
 /**
  * Base node-class
@@ -14,7 +15,7 @@ use Sabre\HTTP\URLUtil;
  * @author Evert Pot (http://evertpot.com/)
  * @license http://sabre.io/license/ Modified BSD License
  */
-abstract class Node implements DAV\INode {
+abstract class Node implements INode {
 
     /**
      * The path to the current node
@@ -24,13 +25,25 @@ abstract class Node implements DAV\INode {
     protected $path;
 
     /**
+     * The overridden name of the node.
+     *
+     * @var string
+     */
+    protected $overrideName;
+
+    /**
      * Sets up the node, expects a full path name
      *
+     * If $overrideName is set, this node shows up in the tree under a
+     * different name. In this case setName() will be disabled.
+     *
      * @param string $path
+     * @param string $overrideName
      */
-    function __construct($path) {
+    function __construct($path, $overrideName = null) {
 
         $this->path = $path;
+        $this->overrideName = $overrideName;
 
     }
 
@@ -43,7 +56,11 @@ abstract class Node implements DAV\INode {
      */
     function getName() {
 
-        list(, $name) = URLUtil::splitPath($this->path);
+        if ($this->overrideName) {
+            return $this->overrideName;
+        }
+
+        list(, $name) = Uri\split($this->path);
         return $name;
 
     }
@@ -56,8 +73,14 @@ abstract class Node implements DAV\INode {
      */
     function setName($name) {
 
-        list($parentPath, ) = URLUtil::splitPath($this->path);
-        list(, $newName) = URLUtil::splitPath($name);
+        if ($this->overrideName) {
+
+            throw new Forbidden('This node cannot be renamed');
+
+        }
+
+        list($parentPath, ) = Uri\split($this->path);
+        list(, $newName) = Uri\split($name);
 
         $newPath = $parentPath . '/' . $newName;
         rename($this->path, $newPath);

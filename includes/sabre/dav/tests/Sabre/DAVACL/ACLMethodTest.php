@@ -1,11 +1,11 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL;
 
 use Sabre\DAV;
 use Sabre\HTTP;
 
-class ACLMethodTest extends \PHPUnit_Framework_TestCase {
+class ACLMethodTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @expectedException Sabre\DAV\Exception\BadRequest
@@ -32,7 +32,7 @@ class ACLMethodTest extends \PHPUnit_Framework_TestCase {
         ];
         $acl = new Plugin();
         $server = new DAV\Server($tree);
-        $server->httpRequest = new HTTP\Request();
+        $server->httpRequest = new HTTP\Request('GET', '/');
         $body = '<?xml version="1.0"?>
 <d:acl xmlns:d="DAV:">
 </d:acl>';
@@ -51,7 +51,7 @@ class ACLMethodTest extends \PHPUnit_Framework_TestCase {
         ];
         $acl = new Plugin();
         $server = new DAV\Server($tree);
-        $server->httpRequest = new HTTP\Request();
+        $server->httpRequest = new HTTP\Request('GET', '/');
         $server->httpRequest->setUrl('/test');
 
         $body = '<?xml version="1.0"?>

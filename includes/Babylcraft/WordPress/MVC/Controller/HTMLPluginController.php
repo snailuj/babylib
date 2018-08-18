@@ -64,7 +64,7 @@ abstract class HTMLPluginController extends PluginController
                 $message .= 'missing data from request';
                 break;
             default:
-                $this->plugin->logMessage("Unknown error code $errorCode", __FILE__, __LINE__);
+                $this->plugin->error("Unknown error code $errorCode", __FILE__, __LINE__);
                 $message .= "unknown error $errorCode";
         }
 

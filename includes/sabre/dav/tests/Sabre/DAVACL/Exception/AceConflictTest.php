@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL\Exception;
 
 use Sabre\DAV;
 
-class AceConflictTest extends \PHPUnit_Framework_TestCase {
+class AceConflictTest extends \PHPUnit\Framework\TestCase {
 
     function testSerialize() {
 

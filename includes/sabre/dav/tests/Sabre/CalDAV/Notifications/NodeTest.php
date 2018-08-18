@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Notifications;
 
 use Sabre\CalDAV;
 
-class NodeTest extends \PHPUnit_Framework_TestCase {
+class NodeTest extends \PHPUnit\Framework\TestCase {
 
     protected $systemStatus;
     protected $caldavBackend;

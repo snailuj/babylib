@@ -7,10 +7,7 @@ use Babylcraft\WordPress\Plugin\Config\IPluginCompositeConfig;
 
 interface IPluginComposite extends IBabylonPlugin
 {
-    /*
-    * Put things into the bag of holding
-    */
-    public function hydrateAll(Babylon $container, IPluginCompositeConfig $config);
+    public function hydrateAll();
 
-    public function getPlugins() : array;
+    public function getPlugin(string $pluginName) : array;
 }

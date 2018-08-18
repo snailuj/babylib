@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
-class CardTest extends \PHPUnit_Framework_TestCase {
+class CardTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @var Sabre\CardDAV\Card

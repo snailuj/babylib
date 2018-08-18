@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class BasicNodeTest extends \PHPUnit_Framework_TestCase {
+class BasicNodeTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * @expectedException Sabre\DAV\Exception\Forbidden
@@ -128,84 +128,6 @@ class BasicNodeTest extends \PHPUnit_Framework_TestCase {
 
     }
 
-    function testSimpleDirectoryConstruct() {
-
-        $dir = new SimpleCollection('simpledir', []);
-        $this->assertInstanceOf('Sabre\DAV\SimpleCollection', $dir);
-
-    }
-
-    /**
-     * @depends testSimpleDirectoryConstruct
-     */
-    function testSimpleDirectoryConstructChild() {
-
-        $file = new FileMock();
-        $dir = new SimpleCollection('simpledir', [$file]);
-        $file2 = $dir->getChild('mockfile');
-
-        $this->assertEquals($file, $file2);
-
-    }
-
-    /**
-     * @expectedException Sabre\DAV\Exception
-     * @depends testSimpleDirectoryConstruct
-     */
-    function testSimpleDirectoryBadParam() {
-
-        $dir = new SimpleCollection('simpledir', ['string shouldn\'t be here']);
-
-    }
-
-    /**
-     * @depends testSimpleDirectoryConstruct
-     */
-    function testSimpleDirectoryAddChild() {
-
-        $file = new FileMock();
-        $dir = new SimpleCollection('simpledir');
-        $dir->addChild($file);
-        $file2 = $dir->getChild('mockfile');
-
-        $this->assertEquals($file, $file2);
-
-    }
-
-    /**
-     * @depends testSimpleDirectoryConstruct
-     * @depends testSimpleDirectoryAddChild
-     */
-    function testSimpleDirectoryGetChildren() {
-
-        $file = new FileMock();
-        $dir = new SimpleCollection('simpledir');
-        $dir->addChild($file);
-
-        $this->assertEquals([$file], $dir->getChildren());
-
-    }
-
-    /*
-     * @depends testSimpleDirectoryConstruct
-     */
-    function testSimpleDirectoryGetName() {
-
-        $dir = new SimpleCollection('simpledir');
-        $this->assertEquals('simpledir', $dir->getName());
-
-    }
-
-    /**
-     * @depends testSimpleDirectoryConstruct
-     * @expectedException Sabre\DAV\Exception\NotFound
-     */
-    function testSimpleDirectoryGetChild404() {
-
-        $dir = new SimpleCollection('simpledir');
-        $dir->getChild('blabla');
-
-    }
 }
 
 class DirectoryMock extends Collection {

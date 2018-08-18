@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV;
 
-class PropFindTest extends \PHPUnit_Framework_TestCase {
+class PropFindTest extends \PHPUnit\Framework\TestCase {
 
     function testHandle() {
 

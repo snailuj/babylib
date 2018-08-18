@@ -3,5 +3,5 @@ namespace Babylcraft\WordPress\Plugin\Config;
 
 interface IPluginCompositeConfig extends IPluginSingleConfig
 {
-    public function getPluginConfigList() : IPluginConfigIterator;
+    public function getIterator() : IPluginConfigIterator;
 }

@@ -10,11 +10,6 @@ use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
  */
 abstract class PluginController implements IPluginController
 {
-    // protected $pluginAPI;
-    // protected $version;
-    // protected $pluginDir;
-    // protected $pluginURI;
-    // private $viewPath;
     private $viewLocationURI;
 
     protected $controllerName;

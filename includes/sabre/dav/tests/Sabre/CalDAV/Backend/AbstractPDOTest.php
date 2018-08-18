@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Backend;
 
@@ -7,7 +7,7 @@ use Sabre\DAV;
 use Sabre\DAV\PropPatch;
 use Sabre\DAV\Xml\Element\Sharee;
 
-abstract class AbstractPDOTest extends \PHPUnit_Framework_TestCase {
+abstract class AbstractPDOTest extends \PHPUnit\Framework\TestCase {
 
     use DAV\DbTestHelperTrait;
 

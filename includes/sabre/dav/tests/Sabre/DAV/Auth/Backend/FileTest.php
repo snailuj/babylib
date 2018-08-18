@@ -1,8 +1,8 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\Auth\Backend;
 
-class FileTest extends \PHPUnit_Framework_TestCase {
+class FileTest extends \PHPUnit\Framework\TestCase {
 
     function tearDown() {
 

@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\PartialUpdate;
 
@@ -12,7 +12,7 @@ use Sabre\HTTP;
  *
  * See: http://sabre.io/dav/http-patch/
  */
-class SpecificationTest extends \PHPUnit_Framework_TestCase {
+class SpecificationTest extends \PHPUnit\Framework\TestCase {
 
     protected $server;
 

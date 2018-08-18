@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL;
 
 use Sabre\DAV;
 
-class PluginUpdatePropertiesTest extends \PHPUnit_Framework_TestCase {
+class PluginUpdatePropertiesTest extends \PHPUnit\Framework\TestCase {
 
     function testUpdatePropertiesPassthrough() {
 

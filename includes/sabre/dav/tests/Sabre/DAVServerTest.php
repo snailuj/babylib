@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre;
 
@@ -16,7 +16,7 @@ use Sabre\HTTP\Sapi;
  * @author Evert Pot (http://evertpot.com/)
  * @license http://sabre.io/license/ Modified BSD License
  */
-abstract class DAVServerTest extends \PHPUnit_Framework_TestCase {
+abstract class DAVServerTest extends \PHPUnit\Framework\TestCase {
 
     protected $setupCalDAV = false;
     protected $setupCardDAV = false;
@@ -227,7 +227,7 @@ abstract class DAVServerTest extends \PHPUnit_Framework_TestCase {
         $this->server->addPlugin($this->authPlugin);
 
         // This will trigger the actual login procedure
-        $this->authPlugin->beforeMethod(new Request(), new Response());
+        $this->authPlugin->beforeMethod(new Request('GET', '/'), new Response());
     }
 
     /**

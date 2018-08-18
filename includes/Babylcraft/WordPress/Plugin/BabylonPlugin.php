@@ -12,7 +12,6 @@ use Babylcraft\WordPress\MVC\Controller\IPluginController;
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 use Babylcraft\WordPress\Plugin\Config\PluginConfigurationException;
 
-
 abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
 {
     use PluginAPI;
@@ -22,7 +21,7 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
     /**
      * @var IPluginSingleConfig
      */
-    private $config;
+    protected $config;
 
     /**
      * @var Container
@@ -38,8 +37,13 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
      * @var string
      */
     private $viewURI;
-    public function hydrate(IPluginSingleConfig $config)
+    public function hydrate(IPluginSingleConfig $config = null)
     {
+        if (!$config) {
+            $this->pluginAPI->warn("hydrating BabylonPlugin with null config in BabylonPlugin::hydrate()");
+            return;
+        }
+
         $this->config = $config;
         $this->registerSymlinkPlugin($this->config->getPluginDir()); //works if plugin isn't symlinked too
         $this->registerActivationHook(
@@ -95,28 +99,29 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
 
     public function activate()
     {
+        $this->debugContent($_SERVER['REQUEST_URI'], $this->config->getPluginName() ."::activate() called. Request uri = ");
+
         if ($this->config->isActive()) {
             throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_ACTIVE, $this);
         }
 
-        if ($this->isDebug()) {
-            $this->logMessage($this->config->getPluginName() ." activated ");
-        }
-
         $this->doActivate();
+
+        
+        $this->info($this->config->getPluginName() ." activated ");
     }
 
     public function deactivate()
     {
+        $this->debugContent($_SERVER['REQUEST_URI'], $this->config->getPluginName() ."::deactivate() called. Request uri = ");
+
         if (!$this->config->isActive()) {
             throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_INACTIVE, $this);
         }
 
-        if ($this->isDebug()) {
-            $this->logMessage($this->config->getPluginName() ." deactivated ");
-        }
-
         $this->doDeactivate();
+
+        $this->info($this->config->getPluginName() ." deactivated ");
     }
 
     abstract protected function doActivate();
@@ -190,6 +195,27 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
         );
 
         return $libScriptHandle;
+    }
+
+    /**
+     * Enqueues the bundled JS file (e.g. one created via webpack) from the built view location.
+     * If getBuiltViewLocationURI() returns null, throws \BadMethodCallException.
+     * 
+     * @param string $scriptName    The name of the script, minus '.js' suffix
+     * @throws \BadMethodCallException  If getBuiltViewLocationURI() returns null
+     * @return string   The generated handle for the enqueued script
+     */
+    protected function enqueueBundleScript(string $controllerName, string $scriptName) : string
+    {
+        $handle = "{$controllerName}_{$scriptName}_bundle";
+        $this->enqueueOtherScript($handle, "{$this->getBuiltViewLocationURI()}{$scriptName}.js");
+
+        return $handle;
+    }
+
+    protected function getBuiltViewLocationURI() : string
+    {
+        return null;
     }
 
     /*

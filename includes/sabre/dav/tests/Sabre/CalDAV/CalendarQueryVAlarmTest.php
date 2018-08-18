@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\VObject;
 
-class CalendarQueryVAlarmTest extends \PHPUnit_Framework_TestCase {
+class CalendarQueryVAlarmTest extends \PHPUnit\Framework\TestCase {
 
     /**
      * This test is specifically for a time-range query on a VALARM, contained

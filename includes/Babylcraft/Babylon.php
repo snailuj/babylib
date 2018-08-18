@@ -8,6 +8,12 @@ use Babylcraft\WordPress\Plugin\IBabylonPlugin;
 
 class Babylon extends Container
 {
+    const LOG_DEBUG = 0x1;
+    const LOG_INFO  = 0x2;
+    const LOG_WARN  = 0x4;
+    const LOG_ERROR = 0x8;
+
+    const KEY_LOG_LEVEL = "logLevel";
     const KEY_WP_EVENTS = "eventEmitter";
     const KEY_BABYLON_TOPLEVEL_PLUGIN = "babylonTopLevel";
     const KEY_PLUGIN = "Plugin";

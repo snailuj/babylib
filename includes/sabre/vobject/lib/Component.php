@@ -63,19 +63,19 @@ class Component extends Node {
             $list = $this->getDefaults();
             $nodes = [];
             foreach ($children as $key => $value) {
-                if ($value instanceof Node) { //put Nodes directly into nodes[]
-                    if (isset($list[$value->name])) { //removing their key from the defaults as well
+                if ($value instanceof Node) {
+                    if (isset($list[$value->name])) {
                         unset($list[$value->name]);
                     }
                     $nodes[] = $value;
                 } else {
-                    $list[$key] = $value; //use other values as props, possibly overriding defaults
+                    $list[$key] = $value;
                 }
             }
-            foreach ($list as $key => $value) { //add properties first
+            foreach ($list as $key => $value) {
                 $this->add($key, $value);
             }
-            foreach ($nodes as $node) { //then add nodes
+            foreach ($nodes as $node) {
                 $this->add($node);
             }
         } else {
@@ -551,11 +551,6 @@ class Component extends Node {
             }
         }
 
-    }
-
-    function __toString() {
-        //todo add ability to set a serialize preference for the object when __toString is called
-        return $this->serialize();
     }
 
     /**

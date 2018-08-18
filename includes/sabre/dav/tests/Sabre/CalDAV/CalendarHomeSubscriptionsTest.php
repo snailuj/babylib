@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\DAV\MkCol;
 
-class CalendarHomeSubscriptionsTest extends \PHPUnit_Framework_TestCase {
+class CalendarHomeSubscriptionsTest extends \PHPUnit\Framework\TestCase {
 
     protected $backend;
 

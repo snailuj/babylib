@@ -9,44 +9,68 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
     /*
     * @var IPluginConfigIterator
     */
-    private $pluginConfigIterator;
+    private $pluginConfigIterator = null;
 
-    //todo stop passing random arrays to these constructors :D
+    /**
+     * @var array
+     */
+    private $pluginInfo = null;
+
+    //todo stop passing random arrays to this constructor :D
     public function __construct(
         string $name,
-        string $wpPluginsDir,
+        string $wpPluginsDirPath,
         string $thisPluginDirName,
         string $mvcNamespace,
-        array $pluginInfoList,
+        array $pluginInfo,
         string $version,
-        Babylon $babylon
+        bool $isActive,
+        int $logLevel
     ) {
         parent::__construct(
             $name,
-            $wpPluginsDir,
+            $wpPluginsDirPath,
             $thisPluginDirName,
             $mvcNamespace,
             $version,
-            true //assume active else we wouldn't be here
+            $isActive,
+            $logLevel
         );
 
-        $pluginConfigList = [];
-        foreach ($pluginInfoList as $pluginName => $pluginInfo) {
-            $pluginConfigList[] = new PluginSingleConfig(
-                $pluginName,
-                $wpPluginsDir,
-                $pluginInfo[0],
-                $pluginInfo[1],
-                $pluginInfo[2],
-                PluginAPI::isBabylonPluginActive($pluginInfo[0])
-            );
+        if (null === $pluginInfo) {
+            throw new \InvalidArgumentException("\$pluginInfo cannot be null");
         }
 
-        $this->pluginConfigIterator = new PluginConfigIterator($pluginConfigList);
+        $this->pluginInfo = $pluginInfo;
     }
 
-    public function getPluginConfigList() : IPluginConfigIterator
+    public function getIterator() : IPluginConfigIterator
     {
+        if (null === $this->pluginConfigIterator) {
+            $this->initIterator();
+        }
+
         return $this->pluginConfigIterator;
+    }
+
+    private function initIterator() {
+        $pluginConfigs = [];
+        foreach ($this->pluginInfo as $name => $data) {
+            $singleConfig = new PluginSingleConfig(
+                $name,
+                $this->wpPluginsDirPath,
+                $data[0],
+                $data[1],
+                $data[2],
+                PluginAPI::isBabylonPluginActive($data[0]),
+                $this->logLevel
+            );
+
+            $pluginConfigs[] = $singleConfig;
+
+            PluginAPI::infoContent($singleConfig, "PluginCompositeConfig found config for $name", __FILE__, __LINE__);
+        }
+
+        $this->pluginConfigIterator = new PluginConfigIterator($pluginConfigs);
     }
 }

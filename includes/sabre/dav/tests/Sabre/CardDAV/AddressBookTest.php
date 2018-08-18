@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
 use Sabre\DAV\PropPatch;
 
-class AddressBookTest extends \PHPUnit_Framework_TestCase {
+class AddressBookTest extends \PHPUnit\Framework\TestCase {
 
     use \Sabre\DAV\DbTestHelperTrait;
 

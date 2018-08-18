@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Principal;
 
 use Sabre\DAVACL;
 
-class ProxyReadTest extends \PHPUnit_Framework_TestCase {
+class ProxyReadTest extends \PHPUnit\Framework\TestCase {
 
     protected $backend;
 

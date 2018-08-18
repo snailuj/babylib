@@ -6,7 +6,7 @@ namespace Babylcraft;
  * implementing a translation method from code to message
  */
 abstract class BabylonException extends \Exception
-{
+{    
     public function __construct($code, $context = null, $previous = null)
     {
         parent::__construct($this->codeToMessage($code, $context), $code, $previous);

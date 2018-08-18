@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAVACL;
 
@@ -7,7 +7,7 @@ use Sabre\HTTP;
 
 require_once 'Sabre/HTTP/ResponseMock.php';
 
-class ExpandPropertiesTest extends \PHPUnit_Framework_TestCase {
+class ExpandPropertiesTest extends \PHPUnit\Framework\TestCase {
 
     function getServer() {
 

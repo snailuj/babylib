@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+4.1.7 (????-??-??)
+------------------
+
+* 
+
 4.1.6 (2018-04-20)
 ------------------
 
@@ -29,7 +34,7 @@ ChangeLog
 
 * #363: Repair script and de-duplicate properties that are only allowed once,
   but appear more than once. (@ddolcimascolo).
-* #377: Addes Pacific Time (US & Canada) as exchange timezone
+* #377: Added Pacific Time (US & Canada) as exchange timezone
 * #384: Added fallback for VCards without `FN`
 
 

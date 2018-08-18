@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV;
 
 use Sabre\VObject;
 
-class Issue166Test extends \PHPUnit_Framework_TestCase {
+class Issue166Test extends \PHPUnit\Framework\TestCase {
 
     function testFlaw() {
 

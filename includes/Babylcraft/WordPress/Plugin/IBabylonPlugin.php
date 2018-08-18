@@ -7,7 +7,7 @@ use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 
 interface IBabylonPlugin
 {
-    public function hydrate(IPluginSingleConfig $pluginConfig);
+    public function hydrate(IPluginSingleConfig $pluginConfig = null);
 
     /*
     * Activate the plugin

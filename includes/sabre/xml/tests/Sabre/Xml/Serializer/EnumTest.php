@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\Xml\Serializer;
 
 use Sabre\Xml\Service;
 
-class EnumTest extends \PHPUnit_Framework_TestCase {
+class EnumTest extends \PHPUnit\Framework\TestCase {
 
     function testSerialize() {
 

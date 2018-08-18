@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CardDAV;
 
 use Sabre\DAVACL;
 
-class AddressBookRootTest extends \PHPUnit_Framework_TestCase {
+class AddressBookRootTest extends \PHPUnit\Framework\TestCase {
 
     function testGetName() {
 

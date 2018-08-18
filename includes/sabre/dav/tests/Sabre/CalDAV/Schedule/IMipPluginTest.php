@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\CalDAV\Schedule;
 
@@ -6,7 +6,7 @@ use Sabre\DAV\Server;
 use Sabre\VObject\ITip\Message;
 use Sabre\VObject\Reader;
 
-class IMipPluginTest extends \PHPUnit_Framework_TestCase {
+class IMipPluginTest extends \PHPUnit\Framework\TestCase {
 
     function testGetPluginInfo() {
 

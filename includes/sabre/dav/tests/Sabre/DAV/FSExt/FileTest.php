@@ -1,10 +1,10 @@
-<?php
+<?php declare (strict_types=1);
 
 namespace Sabre\DAV\FSExt;
 
 require_once 'Sabre/TestUtil.php';
 
-class FileTest extends \PHPUnit_Framework_TestCase {
+class FileTest extends \PHPUnit\Framework\TestCase {
 
     function setUp() {
 

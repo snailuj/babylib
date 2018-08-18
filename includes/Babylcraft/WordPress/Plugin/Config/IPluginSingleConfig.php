@@ -6,6 +6,7 @@ use Babylcraft\WordPress\MVC\Controller\Config\IControllerConfig;
 interface IPluginSingleConfig extends IControllerConfig
 {
     public function isActive() : bool;
+    public function getLogLevel() : int;
     public function getPluginName() : string;
     public function getPluginVersion() : string;
     public function getLibPath() : string;

@@ -1,4 +1,4 @@
-<?php
+<?php declare (strict_types=1);
 
 set_include_path(__DIR__ . '/../lib/' . PATH_SEPARATOR . __DIR__ . PATH_SEPARATOR . get_include_path());
 
@@ -11,6 +11,20 @@ $autoLoader->addPsr4('Sabre\\VObject\\', __DIR__ . '/../vendor/sabre/vobject/tes
 $autoLoader->addPsr4('Sabre\\Xml\\', __DIR__ . '/../vendor/sabre/xml/tests/Sabre/Xml');
 
 date_default_timezone_set('UTC');
+
+// List of variables that can be set by the environment
+$environmentVars = [
+    'SABRE_MYSQLUSER',
+    'SABRE_MYSQLPASS',
+    'SABRE_MYSQLDSN',
+    'SABRE_PGSQLDSN',
+];
+foreach ($environmentVars as $var) {
+
+    if ($value = getenv($var)) {
+        define($var, $value);
+    }
+}
 
 $config = [
     'SABRE_TEMPDIR'   => dirname(__FILE__) . '/temp/',
