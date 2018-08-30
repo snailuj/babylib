@@ -29,9 +29,11 @@ abstract class BabylonType extends WPObjectType
     abstract static protected function getFieldDefs() : array;
 
     static protected function fields() {
-        if (null === self::$fieldDefs) {
-            self::$fieldDefs = function() {
-                $defs = self::prepare_fields(self::getFieldDefs(), self::getName());
+        if (null === static::$fieldDefs) {
+            static::$fieldDefs = function() {
+                $defs = static::prepare_fields(static::getFieldDefs(), static::getName());
+
+                \Babylcraft\WordPress\PluginAPI::debugContent($defs, static::getName() .'::fieldDefs(): $defs = ');
 
                 return $defs;
             };
