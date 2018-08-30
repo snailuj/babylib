@@ -3,17 +3,12 @@
     "description" : "Plugin MVC framework with helpful additions",
     "keywords" : [ "wordpress", "bookings", "babylcraft" ],
     "license" : "GPL-2.0+",
-    "version" : "1.0.0",
+    "version" : "2.0.0",
     "authors" : [
         {
             "name" : "Julian Suggate",
             "email" : "julian.suggate@gmail.com",
             "role" : "Depressed Angry Man"
-        },
-        {
-            "name" : "Leo Suggate",
-            "email" : "leo@parallelconsciousness.com",
-            "role" : "Young Ferrari Brain"
         }
     ],
     "require" : {
