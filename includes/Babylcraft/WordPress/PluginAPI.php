@@ -17,6 +17,8 @@ use Babylcraft\Babylon;
  */
 trait PluginAPI
 {
+    use DBAPI;
+
     private static $eventEmitter;
     private static function getEventEmitter() : EventEmitterInterface
     {
@@ -69,10 +71,6 @@ trait PluginAPI
             $priority,
             $acceptedArgs
         );
-    }
-
-    public function getOption(string $optionName) {
-        return get_option($optionName);
     }
 
     public function isDebug() : bool {
@@ -134,11 +132,6 @@ trait PluginAPI
 
     public static function registerDeactivationHook(string $file, $hookFn) {
         register_deactivation_hook($file, $hookFn);
-    }
-
-    public static function isBabylonPluginActive(string $pluginName) : bool {
-        $pluginLocation = "{$pluginName}/{$pluginName}.php";
-        return in_array($pluginLocation, get_option('active_plugins', []));
     }
 
     public static function debug(string $message, $fileName = '', $lineNum = '')

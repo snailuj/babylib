@@ -11,12 +11,7 @@ trait DBAPI
         return dbDelta($queries, $execute);
     }
 
-    function newPDOPlease() : \PDO
-    {
-        return new \PDO("mysql:dbname=". DB_NAME .";host=". DB_HOST, DB_USER, DB_PASSWORD);
-    }
-
-    function getTablePrefix() : string
+    function getWPTablePrefix() : string
     {
         global $wpdb;
         return $wpdb->prefix;
@@ -26,6 +21,19 @@ trait DBAPI
     {
         global $wpdb;
         return $wpdb->get_charset_collate();
+    }
+
+    public static function isBabylonPluginActive(string $pluginName) : bool {
+        $pluginLocation = "{$pluginName}/{$pluginName}.php";
+        return in_array($pluginLocation, get_option('active_plugins', []));
+    }
+
+    public function getOption(string $optionName) {
+        return get_option($optionName);
+    }
+
+    public function setOption(string $optionName, $optionValue) : bool {
+        return update_option($optionName, $optionValue);
     }
 }
 ?>

@@ -11,6 +11,7 @@ use Babylcraft\WordPress\MVC\Controller\IPluginController;
 
 use Babylcraft\WordPress\Plugin\Config\IPluginSingleConfig;
 use Babylcraft\WordPress\Plugin\Config\PluginConfigurationException;
+use Babylcraft\WordPress\MVC\Model\IModelFactory;
 
 abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
 {
@@ -24,9 +25,19 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
     protected $config;
 
     /**
-     * @var Container
+     * @var IModelFactory Creates instances of model classes for the plugin and its controllers
+     */
+    protected $modelFactory;
+
+    /**
+     * @var Container Holds references to all Controller objects for this plugin
      */
     private $controllers;
+
+    /**
+     * @var array Iterable names of all controllers as string
+     */
+    private $controllerNames = [];
 
     /**
      * @var string
@@ -37,13 +48,17 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
      * @var string
      */
     private $viewURI;
-    public function hydrate(IPluginSingleConfig $config = null)
-    {
-        if (!$config) {
-            $this->pluginAPI->warn("hydrating BabylonPlugin with null config in BabylonPlugin::hydrate()");
-            return;
-        }
 
+    /**
+     * @var int one of the LOG_* constants defined in {@link Babylon}
+     */
+    private $logLevel;
+
+    public function hydrate(IPluginSingleConfig $config, IModelFactory $modelFactory, int $logLevel)
+    {
+        $this->controllers = new Container();
+        $this->logLevel = $logLevel;
+        $this->modelFactory = $modelFactory;
         $this->config = $config;
         $this->registerSymlinkPlugin($this->config->getPluginDir()); //works if plugin isn't symlinked too
         $this->registerActivationHook(
@@ -69,11 +84,10 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
 
     protected function doHydrate()
     {
-        $controllers = new Container();
-        $controllerNames = $this->config->getControllerNames();
+        $this->controllerNames = $this->config->getControllerNames();
         $mvcNamespace = $this->config->getMVCNamespace();
         $mvcNamespace = $mvcNamespace ? "{$mvcNamespace}" : "";
-        foreach ($controllerNames as $controllerName) {
+        foreach ($this->controllerNames as $controllerName) {
             $controllerClass = "{$mvcNamespace}\\Controller\\{$controllerName}";
             if (!class_exists($controllerClass)) {
                 throw new ControllerContainerException(
@@ -92,40 +106,83 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
             }
 
             //can't cast to a class in PHP :'(
-            $controller->configure($this, substr($controllerName, 0, -10)); //chop off the 'Controller' suffix
-            $controllers[$this::KEY_CONTROLLER . $controllerName] = $controller;
+            $controller->configure(
+                $this,
+                substr($controllerName, 0, -10) //chops off the 'Controller' suffix
+            );
+
+            $this->controllers[$this::KEY_CONTROLLER . $controllerName] = $controller;
         }
     }
 
     public function activate()
     {
-        $this->debugContent($_SERVER['REQUEST_URI'], $this->config->getPluginName() ."::activate() called. Request uri = ");
-
         if ($this->config->isActive()) {
             throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_ACTIVE, $this);
         }
 
-        $this->doActivate();
-
+        try {
+            $this->doActivate();
+            $this->activateControllers();
+        } catch (BabylonPluginException $ex) {
+            $ex->addErrorCode(BabylonPluginException::ERR_ACTIVATION_FAILED);
+            throw $ex;
+        } catch (\PDOException $ex) {
+            //catch these so that we can rollback tables and throw BabylonPluginException instead because security
+            $this->error($ex->getMessage());
+            $this->doDeactivate(); //rollback
+            throw new BabylonPluginException(BabylonPluginException::ERR_PDO_EXCEPTION, $this);
+        }
         
         $this->info($this->config->getPluginName() ." activated ");
     }
 
     public function deactivate()
     {
-        $this->debugContent($_SERVER['REQUEST_URI'], $this->config->getPluginName() ."::deactivate() called. Request uri = ");
-
         if (!$this->config->isActive()) {
             throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_INACTIVE, $this);
         }
 
-        $this->doDeactivate();
+        try {
+            $this->doDeactivate();
+            $this->deactivateControllers();
+        } catch (BabylonPluginException $ex) {
+            $ex->addErrorCode(BabylonPluginException::ERR_ACTIVATION_FAILED);
+            throw $ex;
+        } catch (\PDOException $ex) {
+            $this->error($ex->getMessage());
+            throw new BabylonPluginException(BabylonPluginException::ERR_PDO_EXCEPTION, $this);
+        }
 
         $this->info($this->config->getPluginName() ." deactivated ");
     }
 
     abstract protected function doActivate();
     abstract protected function doDeactivate();
+
+    protected function activateControllers() : Void
+    {
+        foreach( $this->controllerNames as $controllerName ) {
+            $this->getController($controllerName)->pluginActivated();
+        }
+    }
+
+    protected function deactivateControllers() : void
+    {
+        foreach( $this->controllerNames as $controllerName ) {
+            $this->getController($controllerName)->pluginDeactivated();
+        }
+    }
+
+    public function getModelFactory() : IModelFactory 
+    {
+        return $this->modelFactory;
+    }
+
+    public function getController(string $controllerName) : IPluginController
+    {
+        return $this->controllers[$this::KEY_CONTROLLER . $controllerName];
+    }
 
     public function getVersion() : string 
     {

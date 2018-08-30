@@ -2,6 +2,7 @@
 namespace Babylcraft\WordPress\Plugin\Config;
 
 use Babylcraft\WordPress\PluginAPI;
+use Babylcraft\WordPress\MVC\Model\IModelFactory;
 class PluginSingleConfig implements IPluginSingleConfig
 {
     protected $name;
@@ -11,7 +12,7 @@ class PluginSingleConfig implements IPluginSingleConfig
     protected $mvcNamespace;
     protected $mvcDir;
     protected $isActive;
-    protected $logLevel;
+    protected $modelFactoryClassName;
 
     /*
     * @var array
@@ -25,15 +26,15 @@ class PluginSingleConfig implements IPluginSingleConfig
         string $mvcNamespace,
         string $version,
         bool $isActive,
-        int $logLevel
+        string $modelFactoryClassName = ''
     ) {
-        $this->name =               $name;
-        $this->version =            $version;
-        $this->wpPluginsDirPath =   $wpPluginsDirPath;
-        $this->thisPluginDirName =  $thisPluginDirName;
-        $this->mvcNamespace =       $mvcNamespace;
-        $this->isActive =           $isActive;
-        $this->logLevel =           $logLevel;
+        $this->name =                   $name;
+        $this->version =                $version;
+        $this->wpPluginsDirPath =       $wpPluginsDirPath;
+        $this->thisPluginDirName =      $thisPluginDirName;
+        $this->mvcNamespace =           $mvcNamespace;
+        $this->isActive =               $isActive;
+        $this->modelFactoryClassName =  $modelFactoryClassName;
     }
 
     public function getLibPath() : string
@@ -49,11 +50,6 @@ class PluginSingleConfig implements IPluginSingleConfig
     public function isActive() : bool
     {
         return $this->isActive;
-    }
-
-    public function getLogLevel() : int
-    {
-        return $this->logLevel;
     }
 
     public function getPluginName() : string
@@ -88,8 +84,21 @@ class PluginSingleConfig implements IPluginSingleConfig
     //returns the path to the plugin file relative to the WP Plugins dir
     public function getPluginFilePathRelative() : string
     {
-        $fileName = "$this->thisPluginDirName.php";
-        return "$this->thisPluginDirName/$fileName";
+        return $this->thisPluginDirName .'/'. "$this->thisPluginDirName.php";
+    }
+
+    public function hasDefaultModelFactory() : bool
+    {
+        return $this->modelFactoryClassName === '';
+    }
+
+    public function getModelFactoryClassName() : string
+    {
+        if ($this->hasDefaultModelFactory()) {
+            throw new \BadMethodCallException("Cannot return classname for ModelFactory -- is default. ");
+        }
+
+        return $this->mvcNamespace ."\\". $this->modelFactoryClassName;
     }
 
     //simple convention-based Controller discovery

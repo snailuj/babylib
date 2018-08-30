@@ -3,18 +3,27 @@ namespace Babylcraft\WordPress\Plugin\Config;
 
 use Babylcraft\Babylon;
 use Babylcraft\WordPress\PluginAPI;
+use Babylcraft\WordPress\MVC\Model\IModelFactory;
+use Babylcraft\WordPress\MVC\Model\Impl\ModelFactory;
 
 class PluginCompositeConfig extends PluginSingleConfig implements IPluginCompositeConfig
 {
-    /*
-    * @var IPluginConfigIterator
-    */
+    /**
+     * @var IPluginConfigIterator Used for iterating over the {@link IPluginSingleConfig} objects
+     * that are contained in this PluginCompositeConfig
+     */
     private $pluginConfigIterator = null;
 
     /**
-     * @var array
+     * @var array Raw config info before it has been hydrated into {@link IPluginSingleConfig}s
      */
     private $pluginInfo = null;
+
+    /**
+     * @var IModelFactory The default IModelFactory implementation to use if a plugin
+     * doesn't define its own
+     */
+    private $defaultModelFactory = null;
 
     //todo stop passing random arrays to this constructor :D
     public function __construct(
@@ -24,8 +33,7 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
         string $mvcNamespace,
         array $pluginInfo,
         string $version,
-        bool $isActive,
-        int $logLevel
+        bool $isActive
     ) {
         parent::__construct(
             $name,
@@ -33,8 +41,7 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
             $thisPluginDirName,
             $mvcNamespace,
             $version,
-            $isActive,
-            $logLevel
+            $isActive
         );
 
         if (null === $pluginInfo) {
@@ -53,24 +60,29 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
         return $this->pluginConfigIterator;
     }
 
+    public function getDefaultModelFactory(): IModelFactory
+    {
+        return $this->defaultModelFactory;
+    }
+
     private function initIterator() {
-        $pluginConfigs = [];
-        foreach ($this->pluginInfo as $name => $data) {
-            $singleConfig = new PluginSingleConfig(
-                $name,
+        $subPluginConfigs = [];
+        foreach ($this->pluginInfo as $subPluginName => $subPluginInfo) {
+            $subPluginConfig = new PluginSingleConfig(
+                $subPluginName,
                 $this->wpPluginsDirPath,
-                $data[0],
-                $data[1],
-                $data[2],
-                PluginAPI::isBabylonPluginActive($data[0]),
-                $this->logLevel
+                $subPluginInfo['pluginDir'],
+                $subPluginInfo['mvcNamespace'],
+                $subPluginInfo['version'],
+                PluginAPI::isBabylonPluginActive($subPluginInfo['pluginDir']),
+                isset($subPluginInfo['modelFactory']) ? $subPluginInfo['modelFactory'] : ''
             );
 
-            $pluginConfigs[] = $singleConfig;
+            $subPluginConfigs[] = $subPluginConfig;
 
-            PluginAPI::infoContent($singleConfig, "PluginCompositeConfig found config for $name", __FILE__, __LINE__);
+            PluginAPI::infoContent($subPluginConfig, "PluginCompositeConfig found config for $subPluginName", __FILE__, __LINE__);
         }
 
-        $this->pluginConfigIterator = new PluginConfigIterator($pluginConfigs);
+        $this->pluginConfigIterator = new PluginConfigIterator($subPluginConfigs);
     }
 }

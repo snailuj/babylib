@@ -15,6 +15,7 @@ class Babylon extends Container
 
     const KEY_LOG_LEVEL = "logLevel";
     const KEY_WP_EVENTS = "eventEmitter";
+    const KEY_DEFAULT_MODEL_FACTORY = "defaultModelFactory";
     const KEY_BABYLON_TOPLEVEL_PLUGIN = "babylonTopLevel";
     const KEY_PLUGIN = "Plugin";
 
