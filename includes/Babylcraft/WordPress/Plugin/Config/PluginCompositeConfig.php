@@ -75,7 +75,7 @@ class PluginCompositeConfig extends PluginSingleConfig implements IPluginComposi
                 $subPluginInfo['mvcNamespace'],
                 $subPluginInfo['version'],
                 PluginAPI::isBabylonPluginActive($subPluginInfo['pluginDir']),
-                isset($subPluginInfo['modelFactory']) ? $subPluginInfo['modelFactory'] : ''
+                $subPluginInfo['modelFactory'] ?? ''
             );
 
             $subPluginConfigs[] = $subPluginConfig;

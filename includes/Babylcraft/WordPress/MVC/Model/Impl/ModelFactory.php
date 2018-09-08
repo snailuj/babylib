@@ -2,10 +2,12 @@
 
 namespace Babylcraft\WordPress\MVC\Model\Impl;
 
-use Babylcraft\WordPress\MVC\Model\IModelFactory;
-use Babylcraft\WordPress\MVC\Model\Impl\CalendarFactory;
 use Babylcraft\WordPress\DBAPI;
 use Babylcraft\WordPress\MVC\Model\ModelException;
+use Babylcraft\WordPress\MVC\Model\IBabylonModel;
+use Babylcraft\WordPress\MVC\Model\ICalendarModel;
+use Babylcraft\WordPress\MVC\Model\IEventModel;
+use Babylcraft\WordPress\MVC\Model\IModelFactory;
 
 
 class ModelFactory implements IModelFactory
@@ -30,8 +32,6 @@ class ModelFactory implements IModelFactory
 
         $this->wpdb = $wpdb;
         $this->tableNamespace = $tableNamespace;
-
-        $this->calendarFactory = new CalendarFactory($pdo, $wpdb, $tableNamespace);
     }
 
     public function cloneDBConnections(IModelFactory $to) : void
@@ -46,56 +46,74 @@ class ModelFactory implements IModelFactory
 
     public function createCalendarSchema() : void 
     {
-        $this->createOrDeleteSchema(CalendarFactory::class, $delete = false);
+        $this->createOrDeleteSchema(CalendarModel::class, $delete = false);
     }
 
     public function deleteCalendarSchema() : void
     {
-        $this->createOrDeleteSchema(CalendarFactory::class, $delete = true);
+        $this->createOrDeleteSchema(CalendarModel::class, $delete = true);
+    }
+
+    public function calendar(string $owner, string $uri, string $tz = 'UTC', array $fields = []) : ICalendarModel
+    {
+        return $this->withSparkles(CalendarModel::calendar($owner, $uri), $fields);
+        // $new = CalendarModel::create($owner, $uri);
+        // $this->configure($new);
+
+        // return $new;
+    }
+
+    public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start, array $fields = []): IEventModel
+    {
+        return $this->withSparkles(EventModel::event($calendar, $name, $rrule, $start), $fields);
+        // $new = EventModel::create($calendar, $name, $rrule);
+        // $this->configure($new);
+
+        // return $new;
+    }
+
+    public function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel
+    {
+        return $this->withSparkles(EventModel::createVariation($event, $name, $rrule), $fields);
+        // $new = EventModel::createVariation($event, $name, $rrule);
+        // $this->configure($new);
+
+        // return $new;
+    }
+
+    protected function withSparkles(IBabylonModel $model, array $fields = []) : IBabylonModel
+    {
+        $model->setValues($fields);
+        $this->configure($model);
+
+        return $model;
     }
 
     protected function createOrDeleteSchema(string $className, bool $delete = false)
     {
-        // if (!$delete && $this->hasSchema($className)) {
-        //     throw new ModelException(ModelException::ERR_SCHEMA_EXISTS, $className);
-        // } else if ($delete && !$this->hasSchema($className)) {
-        //     throw new ModelException(ModelException::ERR_SCHEMA_NOT_EXISTS, $className);
-        // }
-
         $getSchemaMethod = new \ReflectionMethod($className, "getSchema");
-        $this->pdo->exec(
-            $getSchemaMethod->invoke(
-                null,
-                $this->tableNamespace,
-                $this->getWPTablePrefix(),
-                $this->getCharsetCollate(),
-                $delete
-            )
+        $sql = $getSchemaMethod->invoke(
+            null,
+            $this->tableNamespace,
+            $this->getWPTablePrefix(),
+            $this->getCharsetCollate(),
+            $delete
         );
-
-        //TODO Replace this with something that I can rely on giving useful return value
-        //from the docs: "update_option returns true if option value has changed, false if not or if update failed."
-        $this->setHasSchema($className, !$delete);
-        // if ($this->setHasSchema($className, !$delete) === false) {
-        //     //attempt to rollback schema creation
-        //     // $this->pdo->exec(
-        //     //     $getSchemaMethod->invoke(
-        //     //         null,
-        //     //         $this->tableNamespace,
-        //     //         $this->getWPTablePrefix(),
-        //     //         $this->getCharsetCollate(),
-        //     //         !$delete
-        //     //     )
-        //     // );
-
-        //     throw new ModelException(ModelException::ERR_OPTION_UPDATE_FAILED, $this->hasSchemaOption($className));
-        // }
+        
+        if ($sql) {
+            $this->pdo->exec($sql);
+            //TODO Replace this with something that I can rely on giving useful return value
+            //from the docs: "update_option returns true if option value has changed, false if not or if update failed."
+            $this->setHasSchema($className, !$delete);
+        }
     }
 
-    protected function configure(BabylonModel $model) : void
+    protected function configure(BabylonModel $model) //mixed return type to avoid PHP's lack of class-casting in subclasses
     {
         $model->configureDB($this->pdo, $this->wpdb, $this->tableNamespace);
         $model->setModelFactory($this);
+
+        return $model;
     }
 
     protected function hasSchema(string $className) : bool

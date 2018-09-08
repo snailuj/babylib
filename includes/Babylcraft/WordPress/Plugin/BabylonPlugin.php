@@ -27,7 +27,7 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
     /**
      * @var IModelFactory Creates instances of model classes for the plugin and its controllers
      */
-    protected $modelFactory;
+    private $modelFactory;
 
     /**
      * @var Container Holds references to all Controller objects for this plugin
@@ -174,7 +174,7 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
         }
     }
 
-    public function getModelFactory() : IModelFactory 
+    public function getModelFactory() : IModelFactory
     {
         return $this->modelFactory;
     }

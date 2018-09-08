@@ -17,7 +17,6 @@ abstract class BabylonException extends \Exception
         $this->code = $code;
         parent::__construct($this->codeToMessage($code, $context), $code, $previous);
         $this->context = $context;
-        \Babylcraft\WordPress\PluginAPI::debug("message = ". $this->getMessage());
     }
 
     abstract protected function codeToMessage(int $code, $context) : string;
@@ -37,7 +36,6 @@ abstract class BabylonException extends \Exception
     }
 
     protected function codeIncludesError(int $error) : bool {
-        \Babylcraft\WordPress\PluginAPI::debug("code = $this->code, error = $error");
         return ($this->code & $error) != 0; //assumes error codes are powers of 2
     }
 }
