@@ -76,7 +76,7 @@ abstract class BabylonModel implements IBabylonModel
 
         if( $this->getValue(self::FIELD_ID) == -0x1 ) {
             if (!$this->doCreateRecord()) {
-                //do default update logic
+                //do default create logic
             }
         } else {
             if (!$this->doUpdateRecord()) {
@@ -96,14 +96,14 @@ abstract class BabylonModel implements IBabylonModel
     }
 
     /**
-     * @see static::getSerializableValues()
+     * @see IBabylonModel::getSerializable()
      */
     public function getSerializable(): array
     {   //override in subclasses if you need to trim / augment values for serialization
         $map = [];
         foreach( $this->fields as $field => $fieldDef ) {
             if (isset($fieldDef[static::K_NAME])) { //if K_NAME is not set then it's a transient prop
-                \Babylcraft\WordPress\PluginAPI::debug("getFieldsMap() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
+                \Babylcraft\WordPress\PluginAPI::debug("getSerializable() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
                 $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
             }
         }
@@ -112,7 +112,7 @@ abstract class BabylonModel implements IBabylonModel
     }
 
     /**
-     * @see static::getId()
+     * @see IBabylonModel::getId()
      */
     public function getId() : int
     {
@@ -120,7 +120,7 @@ abstract class BabylonModel implements IBabylonModel
     }
 
     /**
-     * @see static::getValue()
+     * @see IBabylonModel::getValue()
      */
     public function getValue(int $field)
     {
