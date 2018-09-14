@@ -96,20 +96,31 @@ abstract class BabylonModel implements IBabylonModel
     }
 
     /**
-     * @see IBabylonModel::getFieldsMap()
+     * @see static::getSerializableValues()
      */
-    public function getFieldsMap() : array
-    {
+    public function getSerializable(): array
+    {   //override in subclasses if you need to trim / augment values for serialization
         $map = [];
         foreach( $this->fields as $field => $fieldDef ) {
-            $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
+            if (isset($fieldDef[static::K_NAME])) { //if K_NAME is not set then it's a transient prop
+                \Babylcraft\WordPress\PluginAPI::debug("getFieldsMap() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
+                $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
+            }
         }
 
         return $map;
     }
 
     /**
-     * @see IBabylonModel::getValue()
+     * @see static::getId()
+     */
+    public function getId() : int
+    {
+        return $this->getValue(static::FIELD_ID);
+    }
+
+    /**
+     * @see static::getValue()
      */
     public function getValue(int $field)
     {
@@ -204,9 +215,6 @@ abstract class BabylonModel implements IBabylonModel
     protected function addFields(array $fields) : void
     {
         foreach ($fields as $field => $fieldDef) {
-            $fieldDef[self::K_NAME] = $fieldDef[self::K_NAME] ?? BabylonModel::T_NULL;
-            $fieldDEf[self::K_VALUE] = $fieldDef[self::K_VALUE]?? BabylonModel::T_NULL;
-
             $this->addField($field, $fieldDef);
         }
     }
@@ -220,14 +228,24 @@ abstract class BabylonModel implements IBabylonModel
         $this->fields[$field] = $fieldDef;
     }
 
-    protected function setType(int $field, string $type)
+    protected function setParentType(string $type) : void
     {
-        $this->fields[$field][IBabylonModel::K_TYPE] = $type;
+        $this->setFieldType(static::FIELD_PARENT, $type);
     }
 
-    protected static function setParent(IBabylonModel $parent, IBabylonModel $child)
+    protected function setFieldType(int $field, string $type) : void 
+    {
+        $this->fields[$field][static::K_TYPE] = $type;
+    }
+
+    protected static function setParent(IBabylonModel $parent, IBabylonModel $child) : void
     {
         $child->setValue(static::FIELD_PARENT, $parent);
+    }
+
+    public function getParent()
+    {
+        return $this->getValue(static::FIELD_PARENT) ?? null;
     }
 
     public function setModelFactory(IModelFactory $modelFactory) : void
@@ -279,20 +297,20 @@ abstract class BabylonModel implements IBabylonModel
         //always check for ERR_NOT_FOUND
         $errors = !$this->hasField($field) ? FieldException::ERR_NOT_FOUND : FieldException::NONE;
 
-        $ftype = $this->fields[$field][IBabylonModel::K_TYPE] ?? null;
+        $ftype = $this->fields[$field][static::K_TYPE] ?? null;
         $vtype = is_object($value) ? get_class($value) : (is_array($value) ? 'array' : gettype($value));
         if ($errors === FieldException::NONE ) {
             if ( ($forErrors & FieldException::ERR_READ_ONLY) !== 0) {
-                $errors |= ($mode = $this->fields[$field][IBabylonModel::K_MODE] ?? '') == 'r' ? FieldException::ERR_READ_ONLY : 0;
+                $errors |= ($mode = $this->fields[$field][static::K_MODE] ?? '') == 'r' ? FieldException::ERR_READ_ONLY : 0;
             } else { //no valid values if the field is read-only
                 if ( ($forErrors & FieldException::ERR_IS_NULL) !== 0) {
                     if ($this->isNull($value)) {
-                        $errors |= ($this->fields[$field][IBabylonModel::K_OPTIONAL] ?? false) ? 0 : FieldException::ERR_IS_NULL;
+                        $errors |= ($this->fields[$field][static::K_OPTIONAL] ?? false) ? 0 : FieldException::ERR_IS_NULL;
                     }
                 }
 
                 if ( ($forErrors & FieldException::ERR_WRONG_TYPE) !== 0) {
-                    $errors |= ($ftype && ($ftype != gettype($value))) ? FieldException::ERR_WRONG_TYPE : 0;
+                    $errors |= ($value && (!$ftype || ($ftype != $vtype))) ? FieldException::ERR_WRONG_TYPE : 0;
                 }
             }
         }
@@ -307,7 +325,7 @@ abstract class BabylonModel implements IBabylonModel
 
     protected function isNull($value) : bool
     {
-        return IBabylonModel::T_NULL === $value || $value === null;
+        return static::T_NULL === $value || $value === null;
     }
     #endregion
 }

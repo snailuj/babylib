@@ -57,28 +57,16 @@ class ModelFactory implements IModelFactory
     public function calendar(string $owner, string $uri, string $tz = 'UTC', array $fields = []) : ICalendarModel
     {
         return $this->withSparkles(CalendarModel::calendar($owner, $uri), $fields);
-        // $new = CalendarModel::create($owner, $uri);
-        // $this->configure($new);
-
-        // return $new;
     }
 
     public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start, array $fields = []): IEventModel
     {
         return $this->withSparkles(EventModel::event($calendar, $name, $rrule, $start), $fields);
-        // $new = EventModel::create($calendar, $name, $rrule);
-        // $this->configure($new);
-
-        // return $new;
     }
 
     public function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel
     {
         return $this->withSparkles(EventModel::createVariation($event, $name, $rrule), $fields);
-        // $new = EventModel::createVariation($event, $name, $rrule);
-        // $this->configure($new);
-
-        // return $new;
     }
 
     protected function withSparkles(IBabylonModel $model, array $fields = []) : IBabylonModel

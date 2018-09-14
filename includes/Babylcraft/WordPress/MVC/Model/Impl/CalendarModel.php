@@ -72,7 +72,6 @@ class CalendarModel extends BabylonModel implements ICalendarModel
             throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
         }
 
-        $eventModel->setType(self::FIELD_PARENT, get_class($eventModel));
         BabylonModel::setParent($this, $eventModel);
         $this->events[$name] = $eventModel;
 
@@ -109,15 +108,20 @@ class CalendarModel extends BabylonModel implements ICalendarModel
 
     protected function doCreateRecord(): bool
     {
-        $uri = $this->getValue(ICalendarModel::FIELD_URI);
-        $owner = $this->getValue(ICalendarModel::FIELD_OWNER);
-        $this->calendarId = $this->sabre->createCalendar($owner, $uri);
+        $this->calendarId = $this->sabre->createCalendar(
+            $this->getValue(ICalendarModel::FIELD_OWNER),
+            $this->getValue(ICalendarModel::FIELD_URI)
+        );
 
         foreach( $this->events as $eventName => $event ) {
             $event->save();
         }
 
-        $this->vcalendar = $this->sabre->getCalendarForOwner($owner, $uri);
+        $this->vcalendar = $this->sabre->getCalendarForOwner(
+            $this->getValue(ICalendarModel::FIELD_OWNER),
+            $this->getValue(ICalendarModel::FIELD_URI)
+        );
+        
         \Babylcraft\WordPress\PluginAPI::debug(json_encode(@$this->vcalendar->jsonSerialize()));
 
         return true;

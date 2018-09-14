@@ -192,10 +192,6 @@ class SabreFacade
 
         //add EXRULEs
         foreach ($variations as $variation) {
-            if (!array_key_exists($variation["X-UID"])) {
-                throw new FieldException(FieldException::ERR_IS_NULL, "X-UID");
-            }
-
             $exrule = $variation["EXRULE"] ?? null;
             if ($exrule === null) {
                 throw new FieldException(FieldException::ERR_IS_NULL, "EXRULE");
@@ -205,7 +201,6 @@ class SabreFacade
             $root->VEVENT->add("EXRULE", $exrule, $children);
         }
 
-\Babylcraft\WordPress\PluginAPI::debug($root->serialize());
         $this->caldav->createCalendarObject($calendarId, $uri, $root->serialize());
 
         return $root;

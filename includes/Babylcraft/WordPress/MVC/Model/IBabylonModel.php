@@ -25,8 +25,8 @@ interface IBabylonModel
 
     const FIELDS_DEFAULT = [
         //-1 indicates not created in DB yet
-        self::FIELD_ID     => [ self::K_NAME  => 'id', self::K_TYPE => self::T_INT,          self::K_VALUE => -1, self::K_MODE => 'r' ],
-        self::FIELD_PARENT => [                        self::K_TYPE => IBabylonModel::class, self::K_OPTIONAL => true                 ]
+        self::FIELD_ID     => [ self::K_NAME  => 'id', self::K_TYPE => self::T_INT, self::K_VALUE => -1, self::K_MODE => 'r' ],
+        self::FIELD_PARENT => [                                                     self::K_OPTIONAL => true                 ]
     ];
 
     function setModelFactory(IModelFactory $modelFactory) : void;
@@ -35,6 +35,16 @@ interface IBabylonModel
      * Load a Model from storage via FIELD_ID
      */
     public function loadRecord() : void;
+
+    /**
+     * Return the model's parent model, null if there is none.
+     */
+    public function getParent();
+
+    /**
+     * Return the model's ID (or -1 if not saved yet)
+     */
+    public function getId() : int;
     
     /**
      * Saves the instance to whatever storage mechanism was supplied to the
@@ -58,11 +68,13 @@ interface IBabylonModel
     /**
      * Returns an array of all fields as a single-dimensional array in the form
      * [<field id> => $value]. Compare this with ::getFields(), which returns full
-     * field definitions.
+     * field definitions. Implementing classes may also filter the fields depending
+     * on whether or not the fields should be serialized when remoting to / from 
+     * client-side apps.
      * 
      * @return array An array of field key => value pairs
      */
-    function getFieldsMap() : array;
+    function getSerializable() : array;
 
     /**
      * Returns true or false depending on whether this Model has a definition

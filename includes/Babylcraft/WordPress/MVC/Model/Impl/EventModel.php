@@ -9,6 +9,7 @@ use Sabre\CalDAV\Backend;
 use Sabre\VObject;
 use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\SabreFacade;
+use Babylcraft\WordPress\MVC\Model\IBabylonModel;
 
 
 class EventModel extends BabylonModel implements IEventModel
@@ -23,7 +24,7 @@ class EventModel extends BabylonModel implements IEventModel
      * @var array List of IEventModel objects whose FIELD_RRULE and other properties define
      * variations to the FIELD_RRULE of this parent IEventModel
      */
-    private $variations = [];
+    protected $variations = [];
 
     #region static
     /**
@@ -31,10 +32,7 @@ class EventModel extends BabylonModel implements IEventModel
      */
     static public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start) : IEventModel
     {
-        $event = static::makeEvent($name, $rrule);
-        BabylonModel::setParent($calendar, $event);
-
-        return $event;
+        return static::makeEvent($calendar, $name, $rrule, $start);
     }
 
     /**
@@ -42,11 +40,7 @@ class EventModel extends BabylonModel implements IEventModel
      */
     static public function createVariation(IEventModel $event, string $name, string $rrule) : IEventModel
     {
-        $variation = static::makeEvent($name, $rrule);
-        $variation->setType(IEventModel::FIELD_PARENT, EventModel::class);
-        BabylonModel::setParent($event, $variation);
-
-        return $variation;
+        return static::makeEvent($event, $name, $rrule, null);
     }
 
     static public function getSchema(
@@ -58,41 +52,61 @@ class EventModel extends BabylonModel implements IEventModel
         return "";
     }
 
-    static private function makeEvent(string $name, string $rrule, \DateTime $start = null) : IEventModel
-    {
-        $event = new EventModel();
-        $event->setValues([
-            IEventModel::FIELD_NAME  => $name,
-            IEventModel::FIELD_RRULE => $rrule,
-            IEventModel::FIELD_UID   => \Babylcraft\Util::generateUid()
-        ]);
+    //if $uid is null, assumes we are creating a variation
+    static protected function makeEvent(IBabylonModel $parent, string $name, string $rrule, \DateTime $start = null) : IEventModel {
+        $fields = [
+            static::FIELD_NAME   => $name,
+            static::FIELD_RRULE  => $rrule,
+            static::FIELD_START  => $start,
+            static::FIELD_PARENT => $parent
+        ];
 
-        if ($start) {
-            $event->setValue(IEventModel::FIELD_START, $start);
+        $event = new static();
+
+        if (!$start) {
+            $event->isVariation = true;
+            $event->setReadOnlyValue(static::FIELD_UID, \Babylcraft\Util::generateUid());
         }
+
+        $event->setParentType(get_class($parent));
+        $event->setValues($fields);
 
         return $event;
     }
     #endregion
 
     #region IEventModel Implementation
+    /**
+     * @var bool
+     */
+    private $isVariation = false;
     public function variation(string $name, string $rrule, array $fields = []) : IEventModel
     {
-        if (isset($this->variations[$name])) {
+        return $this->addVariationModel($this->getModelFactory()->eventVariation($this, $name, $rrule, $fields));
+    }
+
+    public function isVariation() : bool
+    {
+        return $this->isVariation;
+    }
+
+    protected function addVariationModel(IEventModel $variation) : IEventModel
+    {
+        if ( isset($this->variations[$variation->getValue(static::FIELD_NAME)]) ) {
             throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
         }
 
-        return $this->variations[$name] = $this->getModelFactory()->eventVariation($this, $name, $rrule, $fields);
+        return $this->variations[$variation->getValue(static::FIELD_NAME)] = $variation;
     }
 
     protected function eventToCalDAV() : array
     {
         $caldav = [
-            "SUMMARY" => $this->getValue(IEventModel::FIELD_NAME),
-            "DTSTART" => $this->getValue(IEventModel::FIELD_START)
+            "SUMMARY" => $this->getValue(static::FIELD_NAME),
+            "DTSTART" => $this->getValue(static::FIELD_START)
         ];
 
-        $rrule = $this->getValue(IEventModel::FIELD_RRULE);
+        $rrule = $this->getValue(static::FIELD_RRULE);
         if ($rrule) {
             $caldav["RRULE"] = $rrule;
         }
@@ -123,18 +137,15 @@ class EventModel extends BabylonModel implements IEventModel
 
     protected function variationToCalDAV(IEventModel $variation) : array
     {
-        $rrule = $variation->getValue(IEventModel::FIELD_RRULE);
+        $rrule = $variation->getValue(static::FIELD_RRULE);
         if (!$rrule) {
             throw new FieldException(FieldException::ERR_FIELD_IS_NULL, "RRULE");
         }
 
-        $caldav = [
-            "EXRULE" => $rrule,
-            "X-UID"  => $variation->getValue(IEventModel::FIELD_UID),
-            "X-NAME" => $variation->getValue(IEventModel::FIELD_NAME)
+        return [ 
+            "EXRULE"   => $rrule,
+            "children" => $variation->propsToCalDAV()
         ];
-
-        $caldav["children"] = $variation->propsToCalDAV();
     }
     #endregion
 
@@ -148,33 +159,52 @@ class EventModel extends BabylonModel implements IEventModel
     protected function setupFields() : void
     {
         parent::setupFields();
-        $this->addFields(self::EVENT_FIELDS);
-        $this->setType(self::FIELD_PARENT, ICalendarModel::class);
-        $this->setType(self::FIELD_ID, self::T_STRING); //override the type of FIELD_ID to string
+        $this->addFields(static::EVENT_FIELDS);
+        $this->setParentType(ICalendarModel::class);
+        $this->setFieldType(static::FIELD_ID, static::T_STRING); //override FIELD_ID to string (because it's a UID)
+
+        //
+        // this line removes ID from persistence / serialize calls -- CalDAV and client-side code both rely
+        // on the URI to identify events
+        //
+        unset($this->fields[static::FIELD_ID][static::K_NAME]);
     }
 
     protected /* override */ function doGetValue(int $field)
     {
-        if ($field === IEventModel::FIELD_ID) {
-            return $this->fields[IEventModel::FIELD_UID][IEventModel::K_VALUE] ?? -1;
+        if ($field === static::FIELD_ID) {
+            if ($this->isVariation()) {
+                return $this->getValue(static::FIELD_UID) ?? -1;
+            }
+
+            return $this->fields[static::FIELD_ID][static::K_VALUE];
         }
+
+        return null;
     }
 
     protected function doCreateRecord() : bool
     {
-        $this->sabre->createEvent(
-            $this->getValue(self::FIELD_PARENT)->getValue(ICalendarModel::FIELD_ID),
-            $this->getValue(self::FIELD_NAME),
-            $this->eventToCalDAV(),
-            $this->variationsToCalDAV()
-        );
+        static::createRecordFor($this);
 
         return true;
     }
 
+    static protected function createRecordFor(IEventModel $event) : void
+    {
+        $event->sabre->createEvent(
+            $event->getValue(static::FIELD_PARENT)->getValue(static::FIELD_ID),
+            $event->getValue(static::FIELD_NAME),
+            $event->eventToCalDAV(),
+            $event->variationsToCalDAV()
+        );
+    }
+
     protected function doUpdateRecord() : bool
     {
-        throw new \Exception("Not implemented yet!");
+        \Babylcraft\WordPress\PluginAPI::debug("doUpdateRecord() for: ". $this->getValue(static::FIELD_NAME));
+        return true;
+        // throw new \Exception("Not implemented yet!");
     }
     #endregion
 }
