@@ -20,7 +20,23 @@ class ModelFactory implements IModelFactory
     protected $wpdb;
     private $tableNamespace;
 
-    private $calendarFactory;
+    protected $mappings = [];
+    protected $reverseMappings = [];
+
+    const DEFAULT_MAPPINGS = [
+        ICalendarModel::class => CalendarModel::class,
+        IEventModel::class    => EventModel::class
+    ];
+
+    public function __construct($mappings = null)
+    {
+        $this->mappings = array_merge(
+            $this->mappings,
+            $mappings ?? static::DEFAULT_MAPPINGS
+        );
+
+        $this->reverseMappings = array_flip($this->mappings);
+    }
 
     public function setDBConnections(
         \PDO $pdo, 
@@ -44,42 +60,82 @@ class ModelFactory implements IModelFactory
         throw new \BadMethodCallException("\$to must be an instance of ModelFactory or one of its subclasses. ");
     }
 
+    public function getImplementingClass(string $interface) : string
+    {
+        if (array_key_exists($interface, $this->mappings)) {
+            return $this->mappings[$interface];
+        }
+
+        throw new ModelException(ModelException::ERR_UNKNOWN_MAPPING, "Was given $interface. ");
+    }
+
+    public function getModelInterface(IBabylonModel $model): string
+    {
+        if (array_key_exists(get_class($model), $this->reverseMappings)) {
+            return $this->reverseMappings[get_class($model)];
+        }
+
+        throw new ModelException(ModelException::ERR_UNKNOWN_MAPPING, "Was given object with class ". get_class($model) .". ");
+    }
+
     public function createCalendarSchema() : void 
     {
-        $this->createOrDeleteSchema(CalendarModel::class, $delete = false);
+        $this->createOrDeleteSchema(ICalendarModel::class, $delete = false);
     }
 
     public function deleteCalendarSchema() : void
     {
-        $this->createOrDeleteSchema(CalendarModel::class, $delete = true);
+        $this->createOrDeleteSchema(ICalendarModel::class, $delete = true);
     }
 
     public function calendar(string $owner, string $uri, string $tz = 'UTC', array $fields = []) : ICalendarModel
     {
-        return $this->withSparkles(CalendarModel::calendar($owner, $uri), $fields);
+        return $this->withSparkles(
+            $this->getImplementingClass(ICalendarModel::class)::createCalendar($owner, $uri), $fields);
     }
 
     public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start, array $fields = []): IEventModel
     {
-        return $this->withSparkles(EventModel::event($calendar, $name, $rrule, $start), $fields);
+        return $this->withSparkles(
+            $this->getImplementingClass(IEventModel::class)::createEvent($calendar, $name, $rrule, $start), $fields);
     }
 
     public function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel
     {
-        return $this->withSparkles(EventModel::createVariation($event, $name, $rrule), $fields);
+        return $this->withSparkles(
+            $this->getImplementingClass(IEventModel::class)::createVariation($event, $name, $rrule), $fields);
     }
 
     protected function withSparkles(IBabylonModel $model, array $fields = []) : IBabylonModel
     {
-        $model->setValues($fields);
-        $this->configure($model);
+        //make iterator objects for the declared child types of the new Model object
+        $iterators = [];
+        foreach ( $model->getChildTypes() as $childType ) {
+            $iterators[$this->getImplementingClass($childType)] = new UniqueModelIterator();
+        }
+        
+        //augment $fields with the iterators
+        $fields[IBabylonModel::FIELD_CHILDREN] = $iterators;
 
+        //set all field values on the new Model
+        $model->setValues($fields);        
+        
+        //configure the model with DB access
+        $model->configureDB($this->pdo, $this->wpdb, $this->tableNamespace);
+
+        //give it the ability to make new Model objects (children etc)
+        $model->setModelFactory($this);
+        
         return $model;
     }
 
-    protected function createOrDeleteSchema(string $className, bool $delete = false)
+    protected function createOrDeleteSchema(string $interface, bool $delete = false)
     {
-        $getSchemaMethod = new \ReflectionMethod($className, "getSchema");
+        $getSchemaMethod = new \ReflectionMethod(
+            $this->getImplementingClass($interface),
+            "getSchema"
+        );
+
         $sql = $getSchemaMethod->invoke(
             null,
             $this->tableNamespace,
@@ -92,16 +148,8 @@ class ModelFactory implements IModelFactory
             $this->pdo->exec($sql);
             //TODO Replace this with something that I can rely on giving useful return value
             //from the docs: "update_option returns true if option value has changed, false if not or if update failed."
-            $this->setHasSchema($className, !$delete);
+            $this->setHasSchema($interface, !$delete);
         }
-    }
-
-    protected function configure(BabylonModel $model) //mixed return type to avoid PHP's lack of class-casting in subclasses
-    {
-        $model->configureDB($this->pdo, $this->wpdb, $this->tableNamespace);
-        $model->setModelFactory($this);
-
-        return $model;
     }
 
     protected function hasSchema(string $className) : bool

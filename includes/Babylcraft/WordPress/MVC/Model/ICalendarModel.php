@@ -14,9 +14,10 @@ interface ICalendarModel extends IBabylonModel
     const FIELD_TZ    = 0x4;
 
     const CALENDAR_FIELDS = [
-        self::FIELD_OWNER => [ self::K_TYPE => self::T_STRING, self::K_NAME => 'principaluri', self::K_MODE => 'r'    ],
-        self::FIELD_URI   => [ self::K_TYPE => self::T_STRING, self::K_NAME => 'uri',          self::K_MODE => 'r'    ],
-        self::FIELD_TZ    => [ self::K_TYPE => self::T_DATE  , self::K_NAME => 'timezone',     self::K_VALUE => 'UTC' ]
+        self::FIELD_OWNER       => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'principaluri', self::K_MODE => 'r'    ],
+        self::FIELD_URI         => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uri',          self::K_MODE => 'r'    ],
+        self::FIELD_TZ          => [ self::K_TYPE => self::T_DATE,   self::K_NAME  => 'timezone',     self::K_VALUE => 'UTC' ],
+        self::FIELD_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,  self::K_VALUE => [ IEventModel::class ]                 ]
     ];
     
     /**
@@ -28,5 +29,5 @@ interface ICalendarModel extends IBabylonModel
      * @param string $name Name of the event
      * @param [string] $rrule Recurrence rule
      */
-    function event(string $name, string $rrule = '') : IEventModel;
+    function addEvent(string $name, string $rrule = '') : IEventModel;
 }

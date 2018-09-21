@@ -10,6 +10,7 @@ use Sabre\VObject;
 use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\SabreFacade;
 use Babylcraft\WordPress\MVC\Model\IBabylonModel;
+use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
 
 
 class EventModel extends BabylonModel implements IEventModel
@@ -24,13 +25,13 @@ class EventModel extends BabylonModel implements IEventModel
      * @var array List of IEventModel objects whose FIELD_RRULE and other properties define
      * variations to the FIELD_RRULE of this parent IEventModel
      */
-    protected $variations = [];
+    //protected $variations = [];
 
     #region static
     /**
      * @see IModelFactory::event()
      */
-    static public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start) : IEventModel
+    static public function createEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start) : IEventModel
     {
         return static::makeEvent($calendar, $name, $rrule, $start);
     }
@@ -80,7 +81,7 @@ class EventModel extends BabylonModel implements IEventModel
      * @var bool
      */
     private $isVariation = false;
-    public function variation(string $name, string $rrule, array $fields = []) : IEventModel
+    public function addVariation(string $name, string $rrule, array $fields = []) : IEventModel
     {
         return $this->addVariationModel($this->getModelFactory()->eventVariation($this, $name, $rrule, $fields));
     }
@@ -90,13 +91,21 @@ class EventModel extends BabylonModel implements IEventModel
         return $this->isVariation;
     }
 
+    public function getVariations() : IUniqueModelIterator
+    {
+        return $this->getChildIterator($this->getVariationType());
+    }
+
+    protected function getVariationType() : string 
+    {
+        return IEventModel::class;
+    }
+
     protected function addVariationModel(IEventModel $variation) : IEventModel
     {
-        if ( isset($this->variations[$variation->getValue(static::FIELD_NAME)]) ) {
-            throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
-        }
+        $this->addChild($variation->getValue(static::FIELD_NAME), $variation);
 
-        return $this->variations[$variation->getValue(static::FIELD_NAME)] = $variation;
+        return $variation;
     }
 
     protected function eventToCalDAV() : array
@@ -126,7 +135,7 @@ class EventModel extends BabylonModel implements IEventModel
     protected function variationsToCalDAV() : array
     {
         $caldav = [];
-        foreach( $this->variations as $variation ) {
+        foreach( $this->getVariations() as $variation ) {
             $caldav[] = $this->variationToCalDAV($variation);
         }
 
@@ -137,13 +146,8 @@ class EventModel extends BabylonModel implements IEventModel
 
     protected function variationToCalDAV(IEventModel $variation) : array
     {
-        $rrule = $variation->getValue(static::FIELD_RRULE);
-        if (!$rrule) {
-            throw new FieldException(FieldException::ERR_FIELD_IS_NULL, "RRULE");
-        }
-
-        return [ 
-            "EXRULE"   => $rrule,
+        return [
+            "EXRULE"   => $variation->getValue(static::FIELD_RRULE),
             "children" => $variation->propsToCalDAV()
         ];
     }
@@ -156,7 +160,7 @@ class EventModel extends BabylonModel implements IEventModel
         $this->sabre = new SabreFacade($pdo, $tableNamespace);
     }
 
-    protected function setupFields() : void
+    protected /* override */ function setupFields() : void
     {
         parent::setupFields();
         $this->addFields(static::EVENT_FIELDS);

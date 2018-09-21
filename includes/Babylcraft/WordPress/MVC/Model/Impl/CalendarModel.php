@@ -16,7 +16,7 @@ use Babylcraft\WordPress\MVC\Model\SabreFacade;
 class CalendarModel extends BabylonModel implements ICalendarModel
 {
     #region Static
-    static public function calendar(string $owner, string $uri) : ICalendarModel
+    static public function createCalendar(string $owner, string $uri) : ICalendarModel
     {
         $cal = new CalendarModel();
         $cal->setValues([
@@ -58,22 +58,23 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     /**
      * @var array The events defined on this Calendar
      */
-    protected $events = [];
+    // protected $events = [];
     
-    public function event(string $name, string $rrule = '') : IEventModel
+    public function addEvent(string $name, string $rrule = '') : IEventModel
     {
-        return $this->eventModel(
-            $this->getModelFactory()->event($this, $name, $rrule), $name);
+        return $this->addEventModel(
+            $this->getModelFactory()->event($this, $name, $rrule));
     }
 
-    protected function eventModel(IEventModel $eventModel, string $name) : IEventModel
+    protected function addEventModel(IEventModel $eventModel) : IEventModel
     {
-        if (array_key_exists($name, $this->events)) {
-            throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
-        }
+        // if (array_key_exists($name, $this->events)) {
+        //     throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
+        // }
 
-        BabylonModel::setParent($this, $eventModel);
-        $this->events[$name] = $eventModel;
+        //BabylonModel::setParent($this, $eventModel);
+        //$this->events[$name] = $eventModel;
+        $this->addChild($eventModel->getValue(IEventModel::FIELD_NAME), $eventModel);
 
         return $eventModel;
     }
@@ -98,7 +99,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
 
     protected function doLoadRecord() : bool
     {
-        $this->vcalendar = $sabre->getCalendarForOwner(
+        $this->vcalendar = $this->sabre->getCalendarForOwner(
             $this->getValue(ICalendarModel::FIELD_OWNER),
             $this->getValue(ICalendarModel::FIELD_URI)
         );
@@ -113,47 +114,27 @@ class CalendarModel extends BabylonModel implements ICalendarModel
             $this->getValue(ICalendarModel::FIELD_URI)
         );
 
-        foreach( $this->events as $eventName => $event ) {
-            $event->save();
-        }
-
-        $this->vcalendar = $this->sabre->getCalendarForOwner(
-            $this->getValue(ICalendarModel::FIELD_OWNER),
-            $this->getValue(ICalendarModel::FIELD_URI)
-        );
-        
-        \Babylcraft\WordPress\PluginAPI::debug(json_encode(@$this->vcalendar->jsonSerialize()));
-
         return true;
     }
 
     protected function doUpdateRecord(): bool
     {
-        //todo perftest this, it's O(2n) for events because of the duplicated loop in isDirty()
-        //consider adding a doIfDirty() function to BabylonModel
-        if ($this->isDirty()) {
-            \Babylcraft\WordPress\PluginAPI::warn("Saving calendar, timezone changes are not supported.");
-            foreach( $this->events as $eventName => $event ) {
-                $event->save();
-            }
-        }
+        \Babylcraft\WordPress\PluginAPI::debug(
+            "doUpdateRecord() for: ".
+            $this->getValue(static::FIELD_OWNER) ." ".
+            $this->getValue(static::FIELD_URI)
+        );
 
         return true;
-    }
+        //todo perftest this, it's O(2n) for events because of the duplicated loop in isDirty()
+        //consider adding a doIfDirty() function to BabylonModel
+        // if ($this->isDirty()) {
+        //     foreach( $this->getChildren(IEventModel::class) as $event ) {
+        //         $event->save();
+        //     }
+        // }
 
-    protected function isDirty() : bool
-    {
-        if ($this->dirty) {
-            return true;
-        }
-
-        foreach( $this->events as $event ) {
-            if ($event->isDirty()) {
-                return true;
-            }
-        }
-
-        return false;
+        // return true;
     }
 
     protected function doGetValue(int $field)

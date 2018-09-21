@@ -8,6 +8,7 @@ use Babylcraft\WordPress\MVC\Model\ModelException;
 
 use Babylcraft\WordPress\MVC\Model\HasPersistence;
 use Babylcraft\WordPress\MVC\Model\FieldException;
+use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
 
 
 /**
@@ -66,25 +67,27 @@ abstract class BabylonModel implements IBabylonModel
     /**
      * @see IBabylonModel::save()
      */
-    public function save() : void
+    public function save(bool $recurse = true) : void
     {
-        if (!$this->isDirty()) {
-            return;
+        if ( $this->dirty ) {
+            $this->allValid();
+
+            if( $this->getValue(self::FIELD_ID) == -0x1 ) {
+                if (!$this->doCreateRecord()) {
+                    //do default create logic
+                }
+            } else {
+                if (!$this->doUpdateRecord()) {
+                    //do default update logic
+                }
+            }
+
+            $this->dirty = false;
         }
 
-        $this->allValid();
-
-        if( $this->getValue(self::FIELD_ID) == -0x1 ) {
-            if (!$this->doCreateRecord()) {
-                //do default create logic
-            }
-        } else {
-            if (!$this->doUpdateRecord()) {
-                //do default update logic
-            }
+        if ( $recurse ) {
+            $this->saveChildren($recurse);
         }
-
-        $this->dirty = false;
     }
 
     /**
@@ -141,6 +144,42 @@ abstract class BabylonModel implements IBabylonModel
     }
 
     /**
+     * @see IBabylonModel::getChildTypes()
+     */
+    public function getChildTypes() : array
+    {
+        return $this->getValue(static::FIELD_CHILD_TYPES);
+    }
+
+    /**
+     * @see IBabylonModel::hasChildren()
+     */
+    public function hasChildren(string $interface) : bool
+    {
+        return null !== $this->getChildIterator($interface);
+    }
+
+    /**
+     * @see IBabylonModel::getChild()
+     */
+    public function getChild($key, string $interface) : ?IBabylonModel
+    {   //get the UniqueModelIterator for children having the class that implements the given interface
+        return $this->getChildIterator($interface)[$key] ?? null;
+    }
+
+    /**
+     * @see IBabylonModel::addChild()
+     */
+    public function addChild($key, IBabylonModel $child) : void
+    {
+        if (!$iter = $this->getChildIterator($this->getModelFactory()->getModelInterface($child))) {
+            throw new FieldException(FieldException::ERR_NOT_FOUND, "Child is not of a declared child type for this model. ");
+        }
+
+        $iter[$key] = $child;
+    }
+
+    /**
      * @see IBabylonModel::setValues()
      */
     public function setValues(array $kvpairs) : void
@@ -161,7 +200,7 @@ abstract class BabylonModel implements IBabylonModel
     }
     #endregion
 
-    #region Protected Subclassy stuff
+    #region QoL methods for subclasses
     protected function setupFields() : void
     {
         $this->addFields(self::FIELDS_DEFAULT);
@@ -182,6 +221,15 @@ abstract class BabylonModel implements IBabylonModel
         return false; //fallback on default update() above
     }
 
+    protected function saveChildren($recurse = true) : void
+    {
+        foreach ( $this->getChildIterators() as $iter ) {
+            foreach ( $iter as $key => $model ) {
+                $model->save($recurse);
+            }
+        }
+    }
+
     /**
      * Return null from this function ONLY to indicate that you are not interested in overriding
      * the given field -- the calling function will take that as a flag to run the default getValue
@@ -194,15 +242,32 @@ abstract class BabylonModel implements IBabylonModel
         return null; //fallback on default getValue() above
     }
 
-    protected function isDirty() : bool
+    /**
+     * Returns an array of all child iterators
+     */
+    protected function getChildIterators() : array
     {
-        return $this->dirty;
+        return $this->getValue(static::FIELD_CHILDREN);
+    }
+
+    /**
+     * Returns an implementation of IUniqueModelIterator that will iterate over all child Models of
+     * this Model that implement the given fully-qualified interface name, or null if there are none.
+     * 
+     * @param string $interface The interface name plus namespace of the child type you want to iterate
+     * over
+     * 
+     * @return IUniqueModelIterator|null
+     */
+    protected function getChildIterator(string $interface) : ?IUniqueModelIterator
+    {
+        return $this->getValue(self::FIELD_CHILDREN)[$this->getModelFactory()->getImplementingClass($interface)] ?? null;
     }
 
     protected function setReadOnlyValue(int $field, $value) : void
     {
         //validate against all EXCEPT read-only, throws exception on error
-        $this->validate($field, $value, FieldException::ERR_ALL_VALIDATABLE & ~FieldException::ERR_READ_ONLY);
+        $this->validate($field, $value, FieldException::ALL_VALIDATABLE & ~FieldException::ERR_READ_ONLY);
         $this->doSetValue($field, $value);
     }
 
@@ -219,13 +284,18 @@ abstract class BabylonModel implements IBabylonModel
         }
     }
 
+    /**
+     * Adds the given field definition to the $fields array at position indicated
+     * by the given integer, overwriting any pre-existing fields in the process
+     * to enable overriding of field definitions in subclasses.
+     * 
+     * @param int $field The integer key to use for the field; if a field already
+     * exists for this value, it will be overwritten.
+     * @param array $fieldDef Array of definition options for the field
+     */
     protected function addField(int $field, array $fieldDef) : void
     {
-        if (array_key_exists($field, $this->fields)) {
-            throw new FieldException(FieldExceptioN::ERR_ALREADY_DEFINED, $fieldName ."(key = $field)");
-        }
-
-        $this->fields[$field] = $fieldDef;
+        $this->fields[$field] = $fieldDef; //deliberately allow overwriting
     }
 
     protected function setParentType(string $type) : void
@@ -264,7 +334,7 @@ abstract class BabylonModel implements IBabylonModel
     }
     #endregion
 
-    #region Protected Validation stuff
+    #region Validation stuff
     protected function allValid(bool $throw = true) : int
     {
         foreach( $this->fields as $field => $fieldDef ) {
@@ -292,7 +362,7 @@ abstract class BabylonModel implements IBabylonModel
      * 
      * @return int All discovered errors, bitshifted into an int
      */
-    protected function validate(int $field, $value, int $forErrors = FieldException::ERR_ALL_VALIDATABLE, bool $throw = true) : int
+    protected function validate(int $field, $value, int $forErrors = FieldException::ALL_VALIDATABLE, bool $throw = true) : int
     {
         //always check for ERR_NOT_FOUND
         $errors = !$this->hasField($field) ? FieldException::ERR_NOT_FOUND : FieldException::NONE;
@@ -301,16 +371,22 @@ abstract class BabylonModel implements IBabylonModel
         $vtype = is_object($value) ? get_class($value) : (is_array($value) ? 'array' : gettype($value));
         if ($errors === FieldException::NONE ) {
             if ( ($forErrors & FieldException::ERR_READ_ONLY) !== 0) {
-                $errors |= ($mode = $this->fields[$field][static::K_MODE] ?? '') == 'r' ? FieldException::ERR_READ_ONLY : 0;
+                $errors |= ($mode = $this->fields[$field][static::K_MODE] ?? '') == 'r' 
+                    ? FieldException::ERR_READ_ONLY 
+                    : FieldException::NONE;
             } else { //no valid values if the field is read-only
                 if ( ($forErrors & FieldException::ERR_IS_NULL) !== 0) {
                     if ($this->isNull($value)) {
-                        $errors |= ($this->fields[$field][static::K_OPTIONAL] ?? false) ? 0 : FieldException::ERR_IS_NULL;
+                        $errors |= ($this->fields[$field][static::K_OPTIONAL] ?? false) 
+                        ? FieldException::NONE 
+                        : FieldException::ERR_IS_NULL;
                     }
                 }
 
                 if ( ($forErrors & FieldException::ERR_WRONG_TYPE) !== 0) {
-                    $errors |= ($value && (!$ftype || ($ftype != $vtype))) ? FieldException::ERR_WRONG_TYPE : 0;
+                    $errors |= ($value && (!$ftype || ($ftype != $vtype))) 
+                        ? FieldException::ERR_WRONG_TYPE 
+                        : FieldException::NONE;
                 }
             }
         }

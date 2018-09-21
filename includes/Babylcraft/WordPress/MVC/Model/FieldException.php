@@ -13,9 +13,9 @@ class FieldException extends BabylonException
     const ERR_WRONG_TYPE       = 0x10;
     const ERR_ALREADY_DEFINED  = 0x20;
 
-    const ERR_ALL_VALIDATABLE  
+    const ALL_VALIDATABLE  
         = self::ERR_NOT_FOUND
-        //| self::ERR_UNIQUE_VIOLATION TODO? needs validation from the Model's parent, requires generic "children" field
+        | self::ERR_UNIQUE_VIOLATION //TODO? needs validation from the Model's parent, requires generic "children" field
         | self::ERR_READ_ONLY
         | self::ERR_IS_NULL
         | self::ERR_WRONG_TYPE;
@@ -24,29 +24,31 @@ class FieldException extends BabylonException
     
     protected function codeToMessage(int $code, $context) : string
     {
-        $message = '';
-        $context = (string)$context;
-        
+        $message = '';        
         if ($this->codeIncludesError($this::ERR_NOT_FOUND)) {
-            $message .= "Field not found. $context. ";
+            $message .= "Field not found.";
         }
 
         if ($this->codeIncludesError($this::ERR_UNIQUE_VIOLATION)) {
-            $message .= "Uniqueness constraint violation. $context.";
+            $message .= "Uniqueness constraint violation.";
         }
 
         if ($this->codeIncludesError($this::ERR_READ_ONLY)) {
-            $message .= "Field is readonly. $context. ";
+            $message .= "Field is readonly.";
         }
 
         if ($this->codeIncludesError($this::ERR_IS_NULL)) {
-            $message .= "Field is null, but required. ";
+            $message .= "Field is null, but required.";
         }
 
         if ($this->codeIncludesError($this::ERR_WRONG_TYPE)) {
-            $message .= "Wrong type. $context. ";
+            $message .= "Wrong type.";
+        }
+
+        if ($this->codeIncludesError($this::ERR_ALREADY_DEFINED)) {
+            $message .= "Field already defined.";
         }
         
-        return $message;
+        return $message .($context ? " ". (string)$context ." " : "");
     }
 }

@@ -10,11 +10,12 @@ interface IEventModel extends IBabylonModel
     const FIELD_UID   = 0x8;
 
     const EVENT_FIELDS = [
-        //rrule doesn't have a K_NAME here because it's saved and serialized through CalDAV not our normal structure
-        self::FIELD_NAME  => [ self::K_TYPE => self::T_STRING, self::K_NAME => 'uri',                              ],
-        self::FIELD_RRULE => [ self::K_TYPE => self::T_STRING,                            self::K_OPTIONAL => true ],
-        self::FIELD_START => [ self::K_TYPE => self::T_DATE,   self::K_NAME => 'dtstart',                          ],
-        self::FIELD_UID   => [ self::K_TYPE => self::T_STRING, self::K_NAME => 'uid',     self::K_MODE => 'r'      ]
+        //RRULE doesn't have a K_NAME, but it IS stored and serialized natch -- through CalDAV, not our normal structure
+        self::FIELD_NAME        => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uri',                              ],
+        self::FIELD_RRULE       => [ self::K_TYPE => self::T_STRING,                             self::K_OPTIONAL => true ],
+        self::FIELD_START       => [ self::K_TYPE => self::T_DATE,   self::K_NAME  => 'dtstart',                          ],
+        self::FIELD_UID         => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],
+        self::FIELD_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,  self::K_VALUE => [ IEventModel::class ]              ]
     ];
 
     /**
@@ -28,7 +29,9 @@ interface IEventModel extends IBabylonModel
      * 
      * @return IEventModel The IEventModel object that represents the variation
      */
-    function variation(string $name, string $rrule, array $fields = []) : IEventModel;
+    function addVariation(string $name, string $rrule, array $fields = []) : IEventModel;
 
     function isVariation() : bool;
+
+    function getVariations() : IUniqueModelIterator;
 }
