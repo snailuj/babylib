@@ -43,7 +43,7 @@ class ModelException extends BabylonException
         }
 
         if ($this->codeIncludesError($this::ERR_NO_ID)) {
-            $message .= "Model has no value set for FIELD_ID. ";
+            $message .= "Model has no value set for F_ID. ";
         }
         
         return $message;

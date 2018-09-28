@@ -22,8 +22,8 @@ class EventModel extends BabylonModel implements IEventModel
     private $sabre;
 
     /**
-     * @var array List of IEventModel objects whose FIELD_RRULE and other properties define
-     * variations to the FIELD_RRULE of this parent IEventModel
+     * @var array List of IEventModel objects whose F_RRULE and other properties define
+     * variations to the F_RRULE of this parent IEventModel
      */
     //protected $variations = [];
 
@@ -56,17 +56,17 @@ class EventModel extends BabylonModel implements IEventModel
     //if $uid is null, assumes we are creating a variation
     static protected function makeEvent(IBabylonModel $parent, string $name, string $rrule, \DateTime $start = null) : IEventModel {
         $fields = [
-            static::FIELD_NAME   => $name,
-            static::FIELD_RRULE  => $rrule,
-            static::FIELD_START  => $start,
-            static::FIELD_PARENT => $parent
+            static::F_NAME   => $name,
+            static::F_RRULE  => $rrule,
+            static::F_START  => $start,
+            static::F_PARENT => $parent
         ];
 
         $event = new static();
 
         if (!$start) {
             $event->isVariation = true;
-            $event->setReadOnlyValue(static::FIELD_UID, \Babylcraft\Util::generateUid());
+            $event->setReadOnlyValue(static::F_UID, \Babylcraft\Util::generateUid());
         }
 
         $event->setParentType(get_class($parent));
@@ -103,7 +103,7 @@ class EventModel extends BabylonModel implements IEventModel
 
     protected function addVariationModel(IEventModel $variation) : IEventModel
     {
-        $this->addChild($variation->getValue(static::FIELD_NAME), $variation);
+        $this->addChild($variation->getValue(static::F_NAME), $variation);
 
         return $variation;
     }
@@ -111,11 +111,11 @@ class EventModel extends BabylonModel implements IEventModel
     protected function eventToCalDAV() : array
     {
         $caldav = [
-            "SUMMARY" => $this->getValue(static::FIELD_NAME),
-            "DTSTART" => $this->getValue(static::FIELD_START)
+            "SUMMARY" => $this->getValue(static::F_NAME),
+            "DTSTART" => $this->getValue(static::F_START)
         ];
 
-        $rrule = $this->getValue(static::FIELD_RRULE);
+        $rrule = $this->getValue(static::F_RRULE);
         if ($rrule) {
             $caldav["RRULE"] = $rrule;
         }
@@ -147,7 +147,7 @@ class EventModel extends BabylonModel implements IEventModel
     protected function variationToCalDAV(IEventModel $variation) : array
     {
         return [
-            "EXRULE"   => $variation->getValue(static::FIELD_RRULE),
+            "EXRULE"   => $variation->getValue(static::F_RRULE),
             "children" => $variation->propsToCalDAV()
         ];
     }
@@ -165,23 +165,23 @@ class EventModel extends BabylonModel implements IEventModel
         parent::setupFields();
         $this->addFields(static::EVENT_FIELDS);
         $this->setParentType(ICalendarModel::class);
-        $this->setFieldType(static::FIELD_ID, static::T_STRING); //override FIELD_ID to string (because it's a UID)
+        $this->setFieldType(static::F_ID, static::T_STRING); //override F_ID to string (because it's a UID)
 
         //
         // this line removes ID from persistence / serialize calls -- CalDAV and client-side code both rely
         // on the URI to identify events
         //
-        unset($this->fields[static::FIELD_ID][static::K_NAME]);
+        unset($this->fields[static::F_ID][static::K_NAME]);
     }
 
     protected /* override */ function doGetValue(int $field)
     {
-        if ($field === static::FIELD_ID) {
+        if ($field === static::F_ID) {
             if ($this->isVariation()) {
-                return $this->getValue(static::FIELD_UID) ?? -1;
+                return $this->getValue(static::F_UID) ?? -1;
             }
 
-            return $this->fields[static::FIELD_ID][static::K_VALUE];
+            return $this->fields[static::F_ID][static::K_VALUE];
         }
 
         return null;
@@ -197,8 +197,8 @@ class EventModel extends BabylonModel implements IEventModel
     static protected function createRecordFor(IEventModel $event) : void
     {
         $event->sabre->createEvent(
-            $event->getValue(static::FIELD_PARENT)->getValue(static::FIELD_ID),
-            $event->getValue(static::FIELD_NAME),
+            $event->getValue(static::F_PARENT)->getValue(static::F_ID),
+            $event->getValue(static::F_NAME),
             $event->eventToCalDAV(),
             $event->variationsToCalDAV()
         );
@@ -206,7 +206,7 @@ class EventModel extends BabylonModel implements IEventModel
 
     protected function doUpdateRecord() : bool
     {
-        \Babylcraft\WordPress\PluginAPI::debug("doUpdateRecord() for: ". $this->getValue(static::FIELD_NAME));
+        \Babylcraft\WordPress\PluginAPI::debug("doUpdateRecord() for: ". $this->getValue(static::F_NAME));
         return true;
         // throw new \Exception("Not implemented yet!");
     }

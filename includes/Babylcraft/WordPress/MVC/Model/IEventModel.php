@@ -4,18 +4,18 @@ namespace Babylcraft\WordPress\MVC\Model;
 
 interface IEventModel extends IBabylonModel
 {
-    const FIELD_NAME  = 0x1;
-    const FIELD_RRULE = 0x2;
-    const FIELD_START = 0x4;
-    const FIELD_UID   = 0x8;
+    const F_NAME  = 0x1;
+    const F_RRULE = 0x2;
+    const F_START = 0x4;
+    const F_UID   = 0x8;
 
     const EVENT_FIELDS = [
         //RRULE doesn't have a K_NAME, but it IS stored and serialized natch -- through CalDAV, not our normal structure
-        self::FIELD_NAME        => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uri',                              ],
-        self::FIELD_RRULE       => [ self::K_TYPE => self::T_STRING,                             self::K_OPTIONAL => true ],
-        self::FIELD_START       => [ self::K_TYPE => self::T_DATE,   self::K_NAME  => 'dtstart',                          ],
-        self::FIELD_UID         => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],
-        self::FIELD_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,  self::K_VALUE => [ IEventModel::class ]              ]
+        self::F_NAME        => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uri',                              ],
+        self::F_RRULE       => [ self::K_TYPE => self::T_STRING,                             self::K_OPTIONAL => true ],
+        self::F_START       => [ self::K_TYPE => self::T_DATE,   self::K_NAME  => 'dtstart',                          ],
+        self::F_UID         => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],
+        self::F_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,  self::K_VALUE => [ IEventModel::class ]              ]
     ];
 
     /**

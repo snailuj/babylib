@@ -52,7 +52,7 @@ abstract class BabylonModel implements IBabylonModel
 
     #region IBabylonModel Implementation
     /**
-     * Load from storage via FIELD_ID
+     * Load from storage via F_ID
      * @see IBabylonModel::loadRecord()
      */
     public function loadRecord() : void
@@ -76,7 +76,7 @@ abstract class BabylonModel implements IBabylonModel
         if ( $this->dirty ) {
             $this->allValid();
 
-            if( $this->getValue(self::FIELD_ID) == -0x1 ) {
+            if( $this->getValue(self::F_ID) == -0x1 ) {
                 if (!$this->doCreateRecord()) {
                     //do default create logic
                 }
@@ -159,7 +159,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     public function getId() : int
     {
-        return $this->getValue(static::FIELD_ID);
+        return $this->getValue(static::F_ID);
     }
 
     /**
@@ -188,7 +188,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     public function getChildTypes() : array
     {
-        return $this->getValue(static::FIELD_CHILD_TYPES);
+        return $this->getValue(static::F_CHILD_TYPES);
     }
 
     /**
@@ -287,7 +287,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     protected function getChildIterators() : array
     {
-        return $this->getValue(static::FIELD_CHILDREN);
+        return $this->getValue(static::F_CHILDREN);
     }
 
     /**
@@ -301,7 +301,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     protected function getChildIterator(string $interface) : ?IUniqueModelIterator
     {
-        return $this->getValue(self::FIELD_CHILDREN)[$this->getModelFactory()->getImplementingClass($interface)] ?? null;
+        return $this->getValue(self::F_CHILDREN)[$this->getModelFactory()->getImplementingClass($interface)] ?? null;
     }
 
     protected function setReadOnlyValue(int $field, $value) : void
@@ -340,7 +340,7 @@ abstract class BabylonModel implements IBabylonModel
 
     protected function setParentType(string $type) : void
     {
-        $this->setFieldType(static::FIELD_PARENT, $type);
+        $this->setFieldType(static::F_PARENT, $type);
     }
 
     protected function setFieldType(int $field, string $type) : void 
@@ -350,12 +350,12 @@ abstract class BabylonModel implements IBabylonModel
 
     protected static function setParent(IBabylonModel $parent, IBabylonModel $child) : void
     {
-        $child->setValue(static::FIELD_PARENT, $parent);
+        $child->setValue(static::F_PARENT, $parent);
     }
 
     public function getParent()
     {
-        return $this->getValue(static::FIELD_PARENT) ?? null;
+        return $this->getValue(static::F_PARENT) ?? null;
     }
 
     public function setModelFactory(IModelFactory $modelFactory) : void

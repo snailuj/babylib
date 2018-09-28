@@ -20,8 +20,8 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     {
         $cal = new CalendarModel();
         $cal->setValues([
-            ICalendarModel::FIELD_OWNER => $owner,
-            ICalendarModel::FIELD_URI   => $name
+            ICalendarModel::F_OWNER => $owner,
+            ICalendarModel::F_URI   => $name
         ]);
 
         return $cal;
@@ -74,7 +74,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
 
         //BabylonModel::setParent($this, $eventModel);
         //$this->events[$name] = $eventModel;
-        $this->addChild($eventModel->getValue(IEventModel::FIELD_NAME), $eventModel);
+        $this->addChild($eventModel->getValue(IEventModel::F_NAME), $eventModel);
 
         return $eventModel;
     }
@@ -100,8 +100,8 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     protected function doLoadRecord() : bool
     {
         $this->vcalendar = $this->sabre->getCalendarForOwner(
-            $this->getValue(ICalendarModel::FIELD_OWNER),
-            $this->getValue(ICalendarModel::FIELD_URI)
+            $this->getValue(ICalendarModel::F_OWNER),
+            $this->getValue(ICalendarModel::F_URI)
         );
 
         return true;
@@ -110,8 +110,8 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     protected function doCreateRecord(): bool
     {
         $this->calendarId = $this->sabre->createCalendar(
-            $this->getValue(ICalendarModel::FIELD_OWNER),
-            $this->getValue(ICalendarModel::FIELD_URI)
+            $this->getValue(ICalendarModel::F_OWNER),
+            $this->getValue(ICalendarModel::F_URI)
         );
 
         return true;
@@ -121,8 +121,8 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     {
         \Babylcraft\WordPress\PluginAPI::debug(
             "doUpdateRecord() for: ".
-            $this->getValue(static::FIELD_OWNER) ." ".
-            $this->getValue(static::FIELD_URI)
+            $this->getValue(static::F_OWNER) ." ".
+            $this->getValue(static::F_URI)
         );
 
         return true;
@@ -139,7 +139,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
 
     protected function doGetValue(int $field)
     {
-        if ($field === IBabylonModel::FIELD_ID) {
+        if ($field === IBabylonModel::F_ID) {
             if ($this->calendarId === -1 && $this->vcalendar) {
                 $this->calendarId = explode(',', $this->vcalendar->ID);
             }

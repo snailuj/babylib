@@ -22,7 +22,7 @@ interface IBabylonModel
           T_MODEL_ITER = IUniqueModelIterator::class;
 
     /**
-     * K_ constants are strings used to define keys into the `$fields[FIELD_*]` array
+     * K_ constants are strings used to define keys into the `$fields[F_*]` array
      */
     const K_NAME     = 'name', //accesses the persistence and/or serialization name of a given field - leave unset for transient properties
           K_TYPE     = 'type', //accesses the data type of a given field
@@ -31,12 +31,12 @@ interface IBabylonModel
           K_OPTIONAL = 'optional'; //accesses whether or not the field is optional (all code assumes not unless set to true)
 
     /**
-     * FIELD_ constants are ints that define keys for fields that all IBabylonModel implementations share
+     * F_ constants are ints that define keys for fields that all IBabylonModel implementations share
      */
-    const FIELD_ID          = -0x1,
-          FIELD_PARENT      = -0x2,
-          FIELD_CHILDREN    = -0x3,
-          FIELD_CHILD_TYPES = -0x4;
+    const F_ID          = -0x1,
+          F_PARENT      = -0x2,
+          F_CHILDREN    = -0x3,
+          F_CHILD_TYPES = -0x4;
 
 
     const DEFAULT_ID = -1;
@@ -50,19 +50,19 @@ interface IBabylonModel
      */
     const FIELDS_DEFAULT = [
         //-1 indicates not created in DB yet
-        self::FIELD_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,        self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
-        self::FIELD_PARENT      => [                                                           self::K_OPTIONAL => true                                  ],
-        self::FIELD_CHILDREN    => [                       self::K_TYPE => self::T_MODEL_ITER, self::K_OPTIONAL => true                                  ],
-        self::FIELD_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,      self::K_OPTIONAL => true                                  ]
+        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,        self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
+        self::F_PARENT      => [                                                           self::K_OPTIONAL => true                                  ],
+        self::F_CHILDREN    => [                       self::K_TYPE => self::T_MODEL_ITER, self::K_OPTIONAL => true                                  ],
+        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,      self::K_OPTIONAL => true                                  ]
     ];
 
     function setModelFactory(IModelFactory $modelFactory) : void;
 
     /**
-     * Load a Model from storage via FIELD_ID
+     * Load a Model from storage via F_ID
      * 
      * @throws ModelException ERR_RECORD_NOT_FOUND if data is not found for this model
-     * using the value of FIELD_ID, ERR_NO_ID if FIELD_ID has not been changed from
+     * using the value of F_ID, ERR_NO_ID if F_ID has not been changed from
      * the default (-1)
      */
     function loadRecord() : void;

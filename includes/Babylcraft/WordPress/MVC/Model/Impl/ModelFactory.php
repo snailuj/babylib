@@ -115,7 +115,7 @@ class ModelFactory implements IModelFactory
         }
         
         //augment $fields with the iterators
-        $fields[IBabylonModel::FIELD_CHILDREN] = $iterators;
+        $fields[IBabylonModel::F_CHILDREN] = $iterators;
 
         //set all field values on the new Model
         $model->setValues($fields);        
