@@ -18,7 +18,8 @@ interface IBabylonModel
           T_BOOL   = 'boolean',
           T_DATE   = \DateTime::class,
           T_OBJECT = 'object',
-          T_ARRAY  = 'array';
+          T_ARRAY  = 'array',
+          T_MODEL_ITER = IUniqueModelIterator::class;
 
     /**
      * K_ constants are strings used to define keys into the `$fields[FIELD_*]` array
@@ -37,6 +38,9 @@ interface IBabylonModel
           FIELD_CHILDREN    = -0x3,
           FIELD_CHILD_TYPES = -0x4;
 
+
+    const DEFAULT_ID = -1;
+
     /**
      * Here we make an array out of those shared fields and set their default properties.
      * Properties that do not have a value for self::K_NAME will NOT be serialized or 
@@ -46,28 +50,22 @@ interface IBabylonModel
      */
     const FIELDS_DEFAULT = [
         //-1 indicates not created in DB yet
-        self::FIELD_ID          => [ self::K_NAME => 'id',       self::K_TYPE => self::T_INT,                 self::K_VALUE    => -1,  self::K_MODE => 'r' ],
-        self::FIELD_PARENT      => [                                                                          self::K_OPTIONAL => true                     ],
-        self::FIELD_CHILDREN    => [                             self::K_TYPE => IUniqueModelIterator::class, self::K_OPTIONAL => true                     ],
-        self::FIELD_CHILD_TYPES => [                             self::K_TYPE => self::T_ARRAY,               self::K_OPTIONAL => true                     ]
+        self::FIELD_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,        self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
+        self::FIELD_PARENT      => [                                                           self::K_OPTIONAL => true                                  ],
+        self::FIELD_CHILDREN    => [                       self::K_TYPE => self::T_MODEL_ITER, self::K_OPTIONAL => true                                  ],
+        self::FIELD_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,      self::K_OPTIONAL => true                                  ]
     ];
 
     function setModelFactory(IModelFactory $modelFactory) : void;
 
     /**
      * Load a Model from storage via FIELD_ID
+     * 
+     * @throws ModelException ERR_RECORD_NOT_FOUND if data is not found for this model
+     * using the value of FIELD_ID, ERR_NO_ID if FIELD_ID has not been changed from
+     * the default (-1)
      */
-    public function loadRecord() : void;
-
-    /**
-     * Return the model's parent model, null if there is none.
-     */
-    public function getParent();
-
-    /**
-     * Return the model's ID (or -1 if not saved yet)
-     */
-    public function getId() : int;
+    function loadRecord() : void;
     
     /**
      * Saves the instance to whatever storage mechanism was supplied to the
@@ -80,6 +78,16 @@ interface IBabylonModel
     function save();
 
     /**
+     * Return the model's parent model, null if there is none.
+     */
+    function getParent();
+
+    /**
+     * Return the model's ID (or -1 if not saved yet)
+     */
+    function getId() : int;
+
+    /**
      * Returns an array of all field definitions defined by this Model.
      * The array is keyed by field to facilitate faster lookups.
      * 
@@ -87,6 +95,39 @@ interface IBabylonModel
      * name, type, mode etc if they are specified for the field in question.
      */
     function getFields() : array;
+
+    /**
+     * Returns the type of the field identified by the given field code. This will be either
+     * one of the T_* values in this interface, a fully-qualified class / interface name, or
+     * null if not set.
+     * 
+     * @param int $field The numeric code for the field you wish to get the type for
+     */
+    function getFieldType(int $field) : ?string;
+
+    /**
+     * Returns the storage / serialization name of the field identified by the given field 
+     * code, or null if not set.
+     * 
+     * @param int $field The numeric code for the field you wish to get the name for
+     */
+    function getFieldName(int $field) : ?string;
+
+    /**
+     * Returns the read/read-write mode of the field identified by the given field 
+     * code.
+     * 
+     * @param int $field The numeric code for the field you wish to get the mode for
+     */
+    function getFieldMode(int $field) : ?string;
+
+    /**
+     * Returns true if the field identified by the given field code is optional, false
+     * otherwise.
+     * 
+     * @param int $field The numeric code for the field you wish to check is optional
+     */
+    function isFieldOptional(int $field) : boolean;
 
     /**
      * Returns an array of all fields as a single-dimensional array in the form

@@ -11,7 +11,8 @@ class ModelException extends BabylonException
     const ERR_OPTION_UPDATE_FAILED = 0x4;
     const ERR_BAD_MODEL_FACTORY    = 0x8;
     const ERR_OTHER                = 0x10;
-    const ERR_UNKNOWN_MAPPING    = 0x20;
+    const ERR_UNKNOWN_MAPPING      = 0x20;
+    const ERR_NO_ID                = 0x40;
     
     protected function codeToMessage(int $code, $context) : string
     {
@@ -39,6 +40,10 @@ class ModelException extends BabylonException
 
         if ($this->codeIncludesError($this::ERR_OTHER)) {
             $message .= "General error. ";
+        }
+
+        if ($this->codeIncludesError($this::ERR_NO_ID)) {
+            $message .= "Model has no value set for FIELD_ID. ";
         }
         
         return $message;

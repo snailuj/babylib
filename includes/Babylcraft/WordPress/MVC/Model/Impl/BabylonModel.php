@@ -58,10 +58,14 @@ abstract class BabylonModel implements IBabylonModel
     public function loadRecord() : void
     {
         if (!$this->doLoadRecord()) {
+            if ($this->getId() == static::DEFAULT_ID) {
+                throw new ModelException(ModelException::ERR_NO_ID);
+            }
+
             //do default load process
         }
 
-        $model->dirty = false;
+        $this->dirty = false;
     }
 
     /**
@@ -88,6 +92,42 @@ abstract class BabylonModel implements IBabylonModel
         if ( $recurse ) {
             $this->saveChildren($recurse);
         }
+    }
+
+    function getFieldType(int $field) : ?string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_TYPE] ?? null;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    function getFieldName(int $field) : ?string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_NAME] ?? null;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    function getFieldMode(int $field) : string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_MODE] ?? 'rw';
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    function isFieldOptional(int $field) : boolean
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return ($optional = $field[static::K_OPTIONAL] ?? false) && $optional;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
     }
 
     /**
