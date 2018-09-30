@@ -26,27 +26,27 @@ class FieldException extends BabylonException
     {
         $message = '';        
         if ($this->codeIncludesError($this::ERR_NOT_FOUND)) {
-            $message .= "Field not found.";
+            $message .= "Field not found. ";
         }
 
         if ($this->codeIncludesError($this::ERR_UNIQUE_VIOLATION)) {
-            $message .= "Uniqueness constraint violation.";
+            $message .= "Uniqueness constraint violation. ";
         }
 
         if ($this->codeIncludesError($this::ERR_READ_ONLY)) {
-            $message .= "Field is readonly.";
+            $message .= "Field is readonly. ";
         }
 
         if ($this->codeIncludesError($this::ERR_IS_NULL)) {
-            $message .= "Field is null, but required.";
+            $message .= "Field is null, but required. ";
         }
 
         if ($this->codeIncludesError($this::ERR_WRONG_TYPE)) {
-            $message .= "Wrong type.";
+            $message .= "Wrong type. ";
         }
 
         if ($this->codeIncludesError($this::ERR_ALREADY_DEFINED)) {
-            $message .= "Field already defined.";
+            $message .= "Field already defined. ";
         }
         
         return $message .($context ? " ". (string)$context ." " : "");
