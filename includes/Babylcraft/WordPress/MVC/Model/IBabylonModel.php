@@ -50,10 +50,10 @@ interface IBabylonModel
      */
     const FIELDS_DEFAULT = [
         //-1 indicates not created in DB yet
-        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,        self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
-        self::F_PARENT      => [                                                           self::K_OPTIONAL => true                                  ],
-        self::F_CHILDREN    => [                       self::K_TYPE => self::T_MODEL_ITER, self::K_OPTIONAL => true                                  ],
-        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,      self::K_OPTIONAL => true                                  ]
+        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,   self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
+        self::F_PARENT      => [                                                      self::K_OPTIONAL => true                                  ],
+        self::F_CHILDREN    => [                       self::K_TYPE => self::T_ARRAY, self::K_OPTIONAL => true                                  ],
+        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY, self::K_OPTIONAL => true                                  ]
     ];
 
     function setModelFactory(IModelFactory $modelFactory) : void;
