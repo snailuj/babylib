@@ -85,7 +85,7 @@ interface IBabylonModel
     /**
      * Return the model's ID (or -1 if not saved yet)
      */
-    function getId() : int;
+    function getId();
 
     /**
      * Returns an array of all field definitions defined by this Model.
