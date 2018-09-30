@@ -94,7 +94,7 @@ abstract class BabylonModel implements IBabylonModel
         }
     }
 
-    function getFieldType(int $field) : ?string
+    public function getFieldType(int $field) : ?string
     {
         if ($field = $this->fields[$field] ?? null) {
             return $field[static::K_TYPE] ?? null;
@@ -103,7 +103,7 @@ abstract class BabylonModel implements IBabylonModel
         throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
     }
 
-    function getFieldName(int $field) : ?string
+    public function getFieldName(int $field) : ?string
     {
         if ($field = $this->fields[$field] ?? null) {
             return $field[static::K_NAME] ?? null;
@@ -112,7 +112,7 @@ abstract class BabylonModel implements IBabylonModel
         throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
     }
 
-    function getFieldMode(int $field) : string
+    public function getFieldMode(int $field) : string
     {
         if ($field = $this->fields[$field] ?? null) {
             return $field[static::K_MODE] ?? 'rw';
@@ -121,7 +121,7 @@ abstract class BabylonModel implements IBabylonModel
         throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
     }
 
-    function isFieldOptional(int $field) : boolean
+    public function isFieldOptional(int $field) : bool
     {
         if ($field = $this->fields[$field] ?? null) {
             return ($optional = $field[static::K_OPTIONAL] ?? false) && $optional;

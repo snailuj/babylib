@@ -127,7 +127,7 @@ interface IBabylonModel
      * 
      * @param int $field The numeric code for the field you wish to check is optional
      */
-    function isFieldOptional(int $field) : boolean;
+    function isFieldOptional(int $field) : bool;
 
     /**
      * Returns an array of all fields as a single-dimensional array in the form
