@@ -11,11 +11,11 @@ interface IEventModel extends IBabylonModel
 
     const EVENT_FIELDS = [
         //RRULE doesn't have a K_NAME, but it IS stored and serialized natch -- through CalDAV, not our normal structure
-        self::F_NAME        => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uri',                              ],
-        self::F_RRULE       => [ self::K_TYPE => self::T_STRING,                             self::K_OPTIONAL => true ],
-        self::F_START       => [ self::K_TYPE => self::T_DATE,   self::K_NAME  => 'dtstart',                          ],
-        self::F_UID         => [ self::K_TYPE => self::T_STRING, self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],
-        self::F_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,  self::K_VALUE => [ IEventModel::class ]              ]
+        self::F_NAME        => [ self::K_TYPE => self::T_STRING,            self::K_NAME  => 'uri',                              ],
+        self::F_RRULE       => [ self::K_TYPE => self::T_STRING,                                        self::K_OPTIONAL => true ],
+        self::F_START       => [ self::K_TYPE => \DateTimeImmutable::class, self::K_NAME  => 'dtstart', self::K_OPTIONAL => true ],
+        self::F_UID         => [ self::K_TYPE => self::T_STRING,            self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],
+        self::F_CHILD_TYPES => [ self::K_TYPE => self::T_ARRAY,             self::K_VALUE => [ IEventModel::class ]              ]
     ];
 
     /**
@@ -30,6 +30,8 @@ interface IEventModel extends IBabylonModel
      * @return IEventModel The IEventModel object that represents the variation
      */
     function addVariation(string $name, string $rrule, array $fields = []) : IEventModel;
+
+    function addVariationModel(IEventModel $model) : IEventModel;
 
     function isVariation() : bool;
 

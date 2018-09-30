@@ -11,6 +11,7 @@ use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\SabreFacade;
 use Babylcraft\WordPress\MVC\Model\IBabylonModel;
 use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
+use Sabre\VObject\Component\VEvent;
 
 
 class EventModel extends BabylonModel implements IEventModel
@@ -21,19 +22,21 @@ class EventModel extends BabylonModel implements IEventModel
      */
     private $sabre;
 
-    /**
-     * @var array List of IEventModel objects whose F_RRULE and other properties define
-     * variations to the F_RRULE of this parent IEventModel
-     */
-    //protected $variations = [];
-
     #region static
     /**
      * @see IModelFactory::event()
      */
-    static public function createEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start) : IEventModel
+    static public function createEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start) : IEventModel
     {
         return static::makeEvent($calendar, $name, $rrule, $start);
+    }
+
+    static public function veventToEvent(ICalendarModel $calendar, VEvent $vevent) : IEventModel
+    {   //vevent->SUMMARY is the same as the IEventModel::F_NAME property
+        //it's also copied into the 'uri' column in calendarobjects table on save(), so can be used
+        //as a unique key
+        \Babylcraft\WordPress\PluginAPI::warn("Creating variations from EXRULEs not implemented yet!");
+        return static::makeEvent($calendar, $vevent->SUMMARY, $vevent->RRULE, $vevent->DTSTART);
     }
 
     /**
@@ -53,8 +56,16 @@ class EventModel extends BabylonModel implements IEventModel
         return "";
     }
 
-    //if $uid is null, assumes we are creating a variation
-    static protected function makeEvent(IBabylonModel $parent, string $name, string $rrule, \DateTime $start = null) : IEventModel {
+    //if $start is null, assumes we are creating a variation (because EXRULE doesn't support DTSTART parameters)
+    //in that case, we will generate a UID for the variation (EXRULEs are all serialized into a single column on
+    //the VEvent row in calendarobjects table, so we need something to reference them later)
+    static protected function makeEvent(
+        IBabylonModel $parent,
+        string $name,
+        string $rrule,
+        \DateTimeInterface $start = null,
+        string $uid = null
+    ) : IEventModel {
         $fields = [
             static::F_NAME   => $name,
             static::F_RRULE  => $rrule,
@@ -66,7 +77,7 @@ class EventModel extends BabylonModel implements IEventModel
 
         if (!$start) {
             $event->isVariation = true;
-            $event->setReadOnlyValue(static::F_UID, \Babylcraft\Util::generateUid());
+            $event->setReadOnlyValue( static::F_UID, $uid ?? \Babylcraft\Util::generateUid() );
         }
 
         $event->setParentType(get_class($parent));
@@ -101,7 +112,7 @@ class EventModel extends BabylonModel implements IEventModel
         return IEventModel::class;
     }
 
-    protected function addVariationModel(IEventModel $variation) : IEventModel
+    public function addVariationModel(IEventModel $variation) : IEventModel
     {
         $this->addChild($variation->getValue(static::F_NAME), $variation);
 
@@ -111,7 +122,7 @@ class EventModel extends BabylonModel implements IEventModel
     protected function eventToCalDAV() : array
     {
         $caldav = [
-            "SUMMARY" => $this->getValue(static::F_NAME),
+            "SUMMARY" => $this->getValue(static::F_NAME), //this is also the uri in DB
             "DTSTART" => $this->getValue(static::F_START)
         ];
 
@@ -120,16 +131,28 @@ class EventModel extends BabylonModel implements IEventModel
             $caldav["RRULE"] = $rrule;
         }
 
-        $caldav = array_merge($caldav, $this->propsToCalDAV());
-
-        \Babylcraft\WordPress\PluginAPI::debugContent($caldav, "eventToCalDAV() generated");
-
-        return $caldav;
+        return array_merge($caldav, $this->propsToCalDAV());
     }
 
+    /**
+     * This function returns the properties that are to be saved as Non-Standard Properties
+     * (see the iCalendar RFC) on the VEVENT / EXRULE.
+     * 
+     * For EventModels that are variations (aka EXRULEs in iCalendar-speak), we provide for
+     * storing 'uri' and 'uid' properties.
+     * 
+     * For EventModels that are NOT variations, we do not store any non-standard props.
+     */
     protected function propsToCalDAV() : array
     {
-        return []; //EventModel doesn't actually have any non-standard props at this stage
+        if ($this->isVariation()) {
+            return [
+                $this->getFieldName(static::F_UID)  => $this->getValue(static::F_UID),
+                $this->getFieldName(static::F_NAME) => $this->getValue(static::F_NAME)
+            ];
+        }
+
+        return [];
     }
 
     protected function variationsToCalDAV() : array
@@ -138,8 +161,6 @@ class EventModel extends BabylonModel implements IEventModel
         foreach( $this->getVariations() as $variation ) {
             $caldav[] = $this->variationToCalDAV($variation);
         }
-
-        \Babylcraft\WordPress\PluginAPI::debugContent($caldav, "variationsToCalDAV() generated");
 
         return $caldav;
     }
@@ -153,14 +174,14 @@ class EventModel extends BabylonModel implements IEventModel
     }
     #endregion
 
-    #region IBabylonModel Implementation
-    public /* override */ function configureDB(\PDO $pdo, \wpdb $wpdb, string $tableNamespace = 'babyl_', string $wpTableNamespace = 'wp_')
+    #region overrides
+    public function configureDB(\PDO $pdo, \wpdb $wpdb, string $tableNamespace = 'babyl_', string $wpTableNamespace = 'wp_')
     {
         parent::configureDB($pdo, $wpdb, $tableNamespace, $wpTableNamespace);
         $this->sabre = new SabreFacade($pdo, $tableNamespace);
     }
 
-    protected /* override */ function setupFields() : void
+    protected function setupFields() : void
     {
         parent::setupFields();
         $this->addFields(static::EVENT_FIELDS);
@@ -174,7 +195,13 @@ class EventModel extends BabylonModel implements IEventModel
         unset($this->fields[static::F_ID][static::K_NAME]);
     }
 
-    protected /* override */ function doGetValue(int $field)
+    protected function isDirty() : bool
+    {   //EXRULEs are saved to the table-row of their enclosing VEvent
+        //no need for, nor way to accomplish, individual saving
+        return $this->dirty && !$this->isVariation();
+    }
+
+    protected function doGetValue(int $field)
     {
         if ($field === static::F_ID) {
             if ($this->isVariation()) {
@@ -197,7 +224,7 @@ class EventModel extends BabylonModel implements IEventModel
     static protected function createRecordFor(IEventModel $event) : void
     {
         $event->sabre->createEvent(
-            $event->getValue(static::F_PARENT)->getValue(static::F_ID),
+            $event->getParent()->getValue(static::F_ID),
             $event->getValue(static::F_NAME),
             $event->eventToCalDAV(),
             $event->variationsToCalDAV()

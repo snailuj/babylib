@@ -20,9 +20,12 @@ class SabreFacade
      */
     private $caldav;
 
+    private $timezonePropName;
+
     public function __construct(\PDO $pdo, string $tableNamespace)
     {
         $this->caldav = new CalDAV\Backend\PDO($pdo);
+        $this->timezonePropName = array_search("timezone", $this->caldav->propertyMap);
         $this->caldav->calendarTableName              = $tableNamespace . self::CALENDAR_TABLENAME;
         $this->caldav->calendarInstancesTableName     = $tableNamespace . self::CALENDAR_INSTANCES_TABLENAME;
         $this->caldav->calendarObjectTableName        = $tableNamespace . self::CALENDAR_OBJECT_TABLENAME;
@@ -33,8 +36,7 @@ class SabreFacade
 
     public function createCalendar(string $owner, string $uri, string $tz = 'UTC') : array
     {
-        $timezonePropName = array_search("timezone", $this->caldav->propertyMap);
-        return $this->caldav->createCalendar($owner, $uri, [ $timezonePropName => $tz ]);
+        return $this->caldav->createCalendar($owner, $uri, [ $this->timezonePropName => $tz ]);
     }
 
     public function getCalendarForOwner(string $owner, string $uri) : VObject\Component\VCalendar
@@ -49,6 +51,7 @@ class SabreFacade
         foreach ( $this->caldav->getCalendarsForUser($owner) as $calendarInfo ) {
             $root = new VObject\Component\VCalendar($calendarInfo, false);
             $root->URI = $calendarInfo['uri'];
+            $root->TZID = $calendarInfo[$this->timezonePropName];
 
             $objects = $this->caldav->getCalendarObjects($calendarInfo['id']);
 
@@ -187,7 +190,7 @@ class SabreFacade
      */
     public function createEvent( array $calendarId, string $uri, array $event, array $variations = [] ) : VObject\Component\VCalendar
     {
-        \Babylcraft\WordPress\PluginAPI::debugContent([$event, $variations], "::createEvent() [event, variations] = ");
+        //\Babylcraft\WordPress\PluginAPI::debugContent([$event, $variations], "::createEvent() [event, variations] = ");
         $root = new VObject\Component\VCalendar([ "VEVENT" => $event ], $defaults = false);
 
         //add EXRULEs
@@ -315,7 +318,7 @@ class SabreFacade
             // ) ENGINE=InnoDB $charsetCollate;
         }
         
-        \Babylcraft\WordPress\PluginAPI::debugContent($sql, "SabreFacade getSchema(): ");
+        //\Babylcraft\WordPress\PluginAPI::debugContent($sql, "SabreFacade getSchema(): ");
 
         return $sql;
     }

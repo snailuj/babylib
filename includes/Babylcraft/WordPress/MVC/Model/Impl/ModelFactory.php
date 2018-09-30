@@ -8,6 +8,7 @@ use Babylcraft\WordPress\MVC\Model\IBabylonModel;
 use Babylcraft\WordPress\MVC\Model\ICalendarModel;
 use Babylcraft\WordPress\MVC\Model\IEventModel;
 use Babylcraft\WordPress\MVC\Model\IModelFactory;
+use Sabre\VObject\Component\VEvent;
 
 
 class ModelFactory implements IModelFactory
@@ -94,7 +95,7 @@ class ModelFactory implements IModelFactory
             $this->getImplementingClass(ICalendarModel::class)::createCalendar($owner, $uri), $fields);
     }
 
-    public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start, array $fields = []): IEventModel
+    public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []): IEventModel
     {
         return $this->withSparkles(
             $this->getImplementingClass(IEventModel::class)::createEvent($calendar, $name, $rrule, $start), $fields);
@@ -104,6 +105,12 @@ class ModelFactory implements IModelFactory
     {
         return $this->withSparkles(
             $this->getImplementingClass(IEventModel::class)::createVariation($event, $name, $rrule), $fields);
+    }
+
+    public function eventFromVEvent(ICalendarModel $calendar, VEvent $vevent, array $fields = []) : IEventModel
+    {
+        return $this->withSparkles(
+            $this->getImplementingClass(IEventModel::class)::veventToEvent($calendar, $vevent), $fields);
     }
 
     protected function withSparkles(IBabylonModel $model, array $fields = []) : IBabylonModel

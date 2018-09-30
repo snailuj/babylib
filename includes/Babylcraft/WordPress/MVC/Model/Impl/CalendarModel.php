@@ -12,6 +12,9 @@ use Sabre\CalDAV\Backend;
 use Babylcraft\WordPress\MVC\Model\IEventModel;
 use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\SabreFacade;
+use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
+use Sabre\VObject\Component\VCalendar;
+use Sabre\VObject\Component\VEvent;
 
 class CalendarModel extends BabylonModel implements ICalendarModel
 {
@@ -54,30 +57,52 @@ class CalendarModel extends BabylonModel implements ICalendarModel
      * @var array The calendar DB ID as CalDAV understands it
      */
     private $calendarId = -1;
-
-    /**
-     * @var array The events defined on this Calendar
-     */
-    // protected $events = [];
     
-    public function addEvent(string $name, string $rrule = '') : IEventModel
+    /**
+     * @see ICalendarModel::addEvent()
+     */
+    public function addEvent(string $name, string $rrule = '', \DateTimeInterface $dtStart) : IEventModel
     {
         return $this->addEventModel(
-            $this->getModelFactory()->event($this, $name, $rrule));
+            $this->getModelFactory()->event($this, $name, $rrule, $dtStart));
+    }
+
+    /**
+     * @see ICalendarModel::getEvents()
+     */
+    public function getEvents() : IUniqueModelIterator
+    {
+        return $this->getChildIterator($this->getEventType());
+    }
+
+    protected function getEventType() : string
+    {
+        return IEventModel::class;
     }
 
     protected function addEventModel(IEventModel $eventModel) : IEventModel
     {
-        // if (array_key_exists($name, $this->events)) {
-        //     throw new FieldException(FieldException::ERR_UNIQUE_VIOLATION, $name);
-        // }
-
-        //BabylonModel::setParent($this, $eventModel);
-        //$this->events[$name] = $eventModel;
         $this->addChild($eventModel->getValue(IEventModel::F_NAME), $eventModel);
 
         return $eventModel;
     }
+
+    protected function loadVCalendar(VCalendar $vcalendar) : void
+    {
+        $this->vcalendar = $vcalendar;
+        $this->setValue(static::F_TZ, $vcalendar->TZID->getValue());
+        foreach( $vcalendar->VCALENDAR as $vcalendar ) {
+            foreach( $vcalendar->VEVENT as $vevent ) {
+                $this->loadVEvent($vevent);
+            }
+        }
+    }
+
+    protected function loadVEvent(VEvent $vevent) : void
+    {
+        $this->addEvent($this->getModelFactory()->eventFromVEvent($this, $vevent));
+    }
+
     #endregion
 
     #region IBabylonModel implementation
@@ -99,10 +124,14 @@ class CalendarModel extends BabylonModel implements ICalendarModel
 
     protected function doLoadRecord() : bool
     {
-        $this->vcalendar = $this->sabre->getCalendarForOwner(
-            $this->getValue(ICalendarModel::F_OWNER),
-            $this->getValue(ICalendarModel::F_URI)
+        $this->loadVCalendar(
+            $this->sabre->getCalendarForOwner(
+                $this->getValue(ICalendarModel::F_OWNER),
+                $this->getValue(ICalendarModel::F_URI)
+            )
         );
+
+        \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$this->vcalendar->jsonSerialize()), "CalendarModel::doLoadRecord()");
 
         return true;
     }
@@ -126,15 +155,6 @@ class CalendarModel extends BabylonModel implements ICalendarModel
         );
 
         return true;
-        //todo perftest this, it's O(2n) for events because of the duplicated loop in isDirty()
-        //consider adding a doIfDirty() function to BabylonModel
-        // if ($this->isDirty()) {
-        //     foreach( $this->getChildren(IEventModel::class) as $event ) {
-        //         $event->save();
-        //     }
-        // }
-
-        // return true;
     }
 
     protected function doGetValue(int $field)

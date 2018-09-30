@@ -73,7 +73,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     public function save(bool $recurse = true) : void
     {
-        if ( $this->dirty ) {
+        if ( $this->isDirty() ) {
             $this->allValid();
 
             if( $this->getValue(self::F_ID) == -0x1 ) {
@@ -146,7 +146,7 @@ abstract class BabylonModel implements IBabylonModel
         $map = [];
         foreach( $this->fields as $field => $fieldDef ) {
             if (isset($fieldDef[static::K_NAME])) { //if K_NAME is not set then it's a transient prop
-                \Babylcraft\WordPress\PluginAPI::debug("getSerializable() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
+                //\Babylcraft\WordPress\PluginAPI::debug("getSerializable() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
                 $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
             }
         }
@@ -157,7 +157,7 @@ abstract class BabylonModel implements IBabylonModel
     /**
      * @see IBabylonModel::getId()
      */
-    public function getId() : int
+    public function getId()
     {
         return $this->getValue(static::F_ID);
     }
@@ -249,6 +249,27 @@ abstract class BabylonModel implements IBabylonModel
     protected function doLoadRecord() : bool
     {
         ; //TODO consider making all these doStuff() functions abstract once the behaviour is more fleshed out
+    }
+
+    /**
+     * Override if you need special logic to determine saving behaviour
+     */
+    protected function isDirty() : bool
+    {
+        return $this->dirty;
+    }
+
+    /**
+     * Like ::setValues() but assumes the given array is indexed by K_NAME and not
+     * F_* values.
+     */
+    protected function loadValues(array $nameValuePairs) : void
+    {
+        foreach ( $this->fields as $code => $defn ) {
+            if ($val = $nameValuePairs[$defn[static::K_NAME] ?? null] ?? null) {
+                $this->setValue($code, $val);
+            }
+        }
     }
 
     protected function doCreateRecord() : bool
@@ -414,17 +435,19 @@ abstract class BabylonModel implements IBabylonModel
                 $errors |= ($mode = $this->fields[$field][static::K_MODE] ?? '') == 'r' 
                     ? FieldException::ERR_READ_ONLY 
                     : FieldException::NONE;
-            } else { //no valid values if the field is read-only
+            }
+
+            if ($errors === FieldException::NONE) { //no valid values if the field is read-only
                 if ( ($forErrors & FieldException::ERR_IS_NULL) !== 0) {
                     if ($this->isNull($value)) {
                         $errors |= ($this->fields[$field][static::K_OPTIONAL] ?? false) 
-                        ? FieldException::NONE 
-                        : FieldException::ERR_IS_NULL;
+                            ? FieldException::NONE 
+                            : FieldException::ERR_IS_NULL;
                     }
                 }
 
-                if ( ($forErrors & FieldException::ERR_WRONG_TYPE) !== 0) {
-                    $errors |= ($value && (!$ftype || ($ftype != $vtype))) 
+                if ( $value && ($forErrors & FieldException::ERR_WRONG_TYPE) !== 0 ) {
+                    $errors |= (!$ftype || ($ftype != $vtype))
                         ? FieldException::ERR_WRONG_TYPE 
                         : FieldException::NONE;
                 }

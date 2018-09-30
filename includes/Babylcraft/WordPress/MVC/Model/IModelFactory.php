@@ -2,6 +2,9 @@
 
 namespace Babylcraft\WordPress\MVC\Model;
 
+use Sabre\VObject\Component\VEvent;
+
+
 interface IModelFactory
 {
     function cloneDBConnections(IModelFactory $to) : void;
@@ -57,7 +60,7 @@ interface IModelFactory
      * 
      * @return IEventModel The IEventModel object that represents the event
      */
-    function event(ICalendarModel $calendar, string $name, string $rrule, \DateTime $start, array $fields = []) : IEventModel;
+    function event(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []) : IEventModel;
 
     /**
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as a variation
@@ -71,4 +74,11 @@ interface IModelFactory
      * @return IEventModel The IEventModel object that represents the variation
      */
     function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel;
+
+    /**
+     * Returns an IEventModel representation of the given Sabre VEvent object. If any EXRULEs are defined
+     * on the VEvent, IEventModel representations will be created for them too, and added to the returned
+     * IEventModel as variations.
+     */
+    function eventFromVEvent(ICalendarModel $calendar, VEvent $vevent, array $fields = []) : IEventModel;
 }
