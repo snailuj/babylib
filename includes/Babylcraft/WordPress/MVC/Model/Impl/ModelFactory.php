@@ -17,6 +17,12 @@ class ModelFactory implements IModelFactory
 
     const OPT_HAS_SCHEMA_PREFIX = "has_schema_";
 
+    /**
+     * @var SabreFacade Object that makes the Sabre API more codey and 
+     * less iCalendary
+     */
+    private $sabre;
+
     protected $pdo;
     protected $wpdb;
     private $tableNamespace;
@@ -49,6 +55,7 @@ class ModelFactory implements IModelFactory
 
         $this->wpdb = $wpdb;
         $this->tableNamespace = $tableNamespace;
+        $this->sabre = new SabreFacade($pdo, $tableNamespace);
     }
 
     public function cloneDBConnections(IModelFactory $to) : void
@@ -97,8 +104,34 @@ class ModelFactory implements IModelFactory
 
     public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []): IEventModel
     {
+        // was EventModel::createRecordFor()
+        // $event->sabre->createEvent(
+        //     $event->getParent()->getValue(static::F_ID),
+        //     $event->getValue(static::F_NAME),
+        //     $event->eventToCalDAV(),
+        //     $event->variationsToCalDAV()
+        // );
+
         return $this->withSparkles(
             $this->getImplementingClass(IEventModel::class)::createEvent($calendar, $name, $rrule, $start), $fields);
+    }
+
+    public function load(IBabylonModel $model)
+    {
+        if ($model instanceof ICalendarModel) {
+            // was CalendarModel::loadRecord()
+            // $this->loadVCalendar(
+            //     $this->sabre->getCalendarForOwner(
+            //         $this->getValue(ICalendarModel::F_OWNER),
+            //         $this->getValue(ICalendarModel::F_URI)
+            //     )
+            // );
+
+            // \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$this->toVCalendar()->jsonSerialize()), "CalendarModel::doLoadRecord()");
+        } else {
+            //TODO add caching in here e.g. to Redis or something if it seems like a bottleneck
+            $model->load();
+        }
     }
 
     public function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel

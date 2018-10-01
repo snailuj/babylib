@@ -2,6 +2,9 @@
 
 namespace Babylcraft\WordPress\MVC\Model;
 
+use Sabre\VObject;
+
+
 interface IEventModel extends IBabylonModel
 {
     const F_NAME  = 0x1;
@@ -36,4 +39,11 @@ interface IEventModel extends IBabylonModel
     function isVariation() : bool;
 
     function getVariations() : IUniqueModelIterator;
+
+    /**
+     * I wanted to avoid having to expose Sabre VObjects on these interfaces but it's impossible to keep the underlying sabre
+     * representation in sync with its parent VCalendar and vice versa. So they should be considered friend methods between
+     * ICalendarModel and IEvent, or package visibility or something, neither of which PHP supports.
+     */
+    function toVEvent() : VObject\Component\VEvent;
 }

@@ -79,6 +79,7 @@ abstract class BabylonModel implements IBabylonModel
             if( $this->getValue(self::F_ID) == -0x1 ) {
                 if (!$this->doCreateRecord()) {
                     //do default create logic
+                    $this->getInsertStatement()->execute($this->getSerializable());
                 }
             } else {
                 if (!$this->doUpdateRecord()) {
@@ -141,7 +142,7 @@ abstract class BabylonModel implements IBabylonModel
     /**
      * @see IBabylonModel::getSerializable()
      */
-    public function getSerializable(): array
+    public function getSerializable() : array
     {   //override in subclasses if you need to trim / augment values for serialization
         $map = [];
         foreach( $this->fields as $field => $fieldDef ) {
@@ -301,6 +302,35 @@ abstract class BabylonModel implements IBabylonModel
     protected function doGetValue(int $field)
     {
         return null; //fallback on default getValue() above
+    }
+
+    /**
+     * @var \PDOStatement
+     */
+    private $insertStmt = null;
+    protected function getInsertStatement() : \PDOStatement
+    {
+        $names = [];
+        $values = [];
+        if (!$this->insertStmt) {
+            foreach( $this->fields as $code => $defn ) {
+                if ( $name = $defn[static::K_NAME] ?? null) {
+                    $names[]  = $name;
+                    $values[] = ':'. $name;
+                }
+            }
+
+            $sql = sprintf(
+                'INSERT INTO %s (%s) VALUES (%s)',
+                $this->tableNamespace . $this->getValue(static::F_TABLE_NAME),
+                implode(', ', $names),
+                implode(', ', $values)
+            );
+
+            $this->insertStmt = $this->pdo->prepare($sql);
+        }
+
+        return $this->insertStmt;
     }
 
     /**

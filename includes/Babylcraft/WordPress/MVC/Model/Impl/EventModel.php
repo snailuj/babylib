@@ -22,6 +22,11 @@ class EventModel extends BabylonModel implements IEventModel
      */
     private $sabre;
 
+    /**
+     * @var VEvent Underlying VObject representation of this event.
+     */
+    private $vevent;
+
     #region static
     /**
      * @see IModelFactory::event()
@@ -31,7 +36,7 @@ class EventModel extends BabylonModel implements IEventModel
         return static::makeEvent($calendar, $name, $rrule, $start);
     }
 
-    static public function veventToEvent(ICalendarModel $calendar, VEvent $vevent) : IEventModel
+    static public function fromVEvent(ICalendarModel $calendar, VEvent $vevent) : IEventModel
     {   //vevent->SUMMARY is the same as the IEventModel::F_NAME property
         //it's also copied into the 'uri' column in calendarobjects table on save(), so can be used
         //as a unique key
@@ -117,6 +122,24 @@ class EventModel extends BabylonModel implements IEventModel
         $this->addChild($variation->getValue(static::F_NAME), $variation);
 
         return $variation;
+    }
+
+    public function toVEvent() : VObject\Component\VEvent
+    {
+        if ($this->isVariation()) {
+            //use the parent Event as the vevent
+            $this->vevent = $this->getParent()->toVEvent();
+        }
+
+        if (!$this->vevent) {
+            $this->vevent = $this->getParent()->toVCalendar()->create(
+                "VEVENT",
+                $this->eventToCalDAV(),
+                $defaults = false
+            );
+        }
+
+        return $this->vevent;
     }
 
     protected function eventToCalDAV() : array

@@ -36,7 +36,8 @@ interface IBabylonModel
     const F_ID          = -0x1,
           F_PARENT      = -0x2,
           F_CHILDREN    = -0x3,
-          F_CHILD_TYPES = -0x4;
+          F_CHILD_TYPES = -0x4,
+          F_TABLE_NAME  = -0x5;
 
 
     const DEFAULT_ID = -1;
@@ -50,10 +51,11 @@ interface IBabylonModel
      */
     const FIELDS_DEFAULT = [
         //-1 indicates not created in DB yet
-        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,   self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
-        self::F_PARENT      => [                                                      self::K_OPTIONAL => true                                  ],
-        self::F_CHILDREN    => [                       self::K_TYPE => self::T_ARRAY, self::K_OPTIONAL => true                                  ],
-        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY, self::K_OPTIONAL => true                                  ]
+        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,    self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
+        self::F_PARENT      => [                                                       self::K_OPTIONAL => true                                  ],
+        self::F_CHILDREN    => [                       self::K_TYPE => self::T_ARRAY,  self::K_OPTIONAL => true                                  ],
+        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,  self::K_OPTIONAL => true                                  ],
+        self::F_TABLE_NAME  => [                       self::K_TYPE => self::T_STRING, self::K_OPTIONAL => true                                  ]
     ];
 
     function setModelFactory(IModelFactory $modelFactory) : void;
@@ -131,10 +133,13 @@ interface IBabylonModel
 
     /**
      * Returns an array of all fields as a single-dimensional array in the form
-     * [<field id> => $value]. Compare this with ::getFields(), which returns full
-     * field definitions. Implementing classes may also filter the fields depending
-     * on whether or not the fields should be serialized when remoting to / from 
+     * [$fields[<field id>][<K_NAME>] => $value]. Compare this with ::getFields(), which 
+     * returns full field definitions. Implementing classes may also filter the fields 
+     * depending on whether or not the fields should be serialized when remoting to / from 
      * client-side apps.
+     * 
+     * If a field does not have a value for K_NAME, it will be filtered from the returned
+     * results.
      * 
      * @return array An array of field key => value pairs
      */
