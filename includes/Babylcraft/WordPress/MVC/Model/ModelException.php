@@ -13,39 +13,44 @@ class ModelException extends BabylonException
     const ERR_OTHER                = 0x10;
     const ERR_UNKNOWN_MAPPING      = 0x20;
     const ERR_NO_ID                = 0x40;
+    const ERR_UNIQUE_VIOLATION     = 0x80;
     
     protected function codeToMessage(int $code, $context) : string
     {
         $message = '';
         $context = (string)$context;
         if ($this->codeIncludesError($this::ERR_PDO_EXCEPTION)) {
-            $message .= "PDO failure in {$context}. Exception not wrapped for security. ";
+            $message .= "PDO failure. Exception not wrapped for security.";
         }
 
         if ($this->codeIncludesError($this::ERR_RECORD_NOT_FOUND)) {
-            $message .= "Object {$context} not found. ";
+            $message .= "Object not found.";
         }
 
         if ($this->codeIncludesError($this::ERR_OPTION_UPDATE_FAILED)) {
-            $message .= "Failed to update option {$context}.";
+            $message .= "Failed to update option.";
         }
 
         if ($this->codeIncludesError($this::ERR_BAD_MODEL_FACTORY)) {
-            $message .= "Incorrect ModelFactory subtype in {$context}. ";
+            $message .= "Incorrect ModelFactory subtype.";
         }
 
         if ($this->codeIncludesError($this::ERR_UNKNOWN_MAPPING)) {
-            $message .= "Unknown mapping. $context. ";
+            $message .= "Unknown mapping.";
         }
 
         if ($this->codeIncludesError($this::ERR_OTHER)) {
-            $message .= "General error. ";
+            $message .= "General error.";
         }
 
         if ($this->codeIncludesError($this::ERR_NO_ID)) {
-            $message .= "Model has no value set for F_ID. ";
+            $message .= "Model has no value set for F_ID.";
+        }
+
+        if ($this->codeIncludesError($this::ERR_UNIQUE_VIOLATION)) {
+            $message .= "Uniqueness constraint violation.";
         }
         
-        return $message;
+        return $message .($context ? " ". (string)$context ." " : "");
     }
 }

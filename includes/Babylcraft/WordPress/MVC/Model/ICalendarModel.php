@@ -35,11 +35,4 @@ interface ICalendarModel extends IBabylonModel
      * Returns an iterator for all IEventModel children of this ICalendarModel.
      */
     function getEvents() : IUniqueModelIterator;
-
-    /**
-     * I'd hoped to avoid this. Needed to keep the Sabre representations in sync between
-     * IEventModel and ICalendarModel. So fuck it. Just don't use them outside of those implementations
-     * ... or subclasses I guess.
-     */
-    function toVCalendar() : VObject\Component\VCalendar;
 }

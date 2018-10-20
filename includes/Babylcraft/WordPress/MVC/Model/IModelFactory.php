@@ -46,7 +46,7 @@ interface IModelFactory
      * 
      * @return ICalendarModel The new ICalendarModel instance
      */
-    function calendar(string $owner, string $uri, string $tz = 'UTC') : ICalendarModel;
+    function newCalendar(string $owner, string $uri, string $tz = 'UTC') : ICalendarModel;
 
     /**
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as an event on the 
@@ -60,7 +60,7 @@ interface IModelFactory
      * 
      * @return IEventModel The IEventModel object that represents the event
      */
-    function event(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []) : IEventModel;
+    function newEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []) : IEventModel;
 
     /**
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as a variation
@@ -73,7 +73,7 @@ interface IModelFactory
      * 
      * @return IEventModel The IEventModel object that represents the variation
      */
-    function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel;
+    function newVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel;
 
     /**
      * Returns an IEventModel representation of the given Sabre VEvent object. If any EXRULEs are defined

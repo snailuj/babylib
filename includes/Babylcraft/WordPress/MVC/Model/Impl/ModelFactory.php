@@ -9,6 +9,7 @@ use Babylcraft\WordPress\MVC\Model\ICalendarModel;
 use Babylcraft\WordPress\MVC\Model\IEventModel;
 use Babylcraft\WordPress\MVC\Model\IModelFactory;
 use Sabre\VObject\Component\VEvent;
+use Babylcraft\WordPress\MVC\Model\SabreFacade;
 
 
 class ModelFactory implements IModelFactory
@@ -21,11 +22,11 @@ class ModelFactory implements IModelFactory
      * @var SabreFacade Object that makes the Sabre API more codey and 
      * less iCalendary
      */
-    private $sabre;
+    protected $sabre;
 
     protected $pdo;
     protected $wpdb;
-    private $tableNamespace;
+    protected $tableNamespace;
 
     protected $mappings = [];
     protected $reverseMappings = [];
@@ -96,36 +97,80 @@ class ModelFactory implements IModelFactory
         $this->createOrDeleteSchema(ICalendarModel::class, $delete = true);
     }
 
-    public function calendar(string $owner, string $uri, string $tz = 'UTC', array $fields = []) : ICalendarModel
+    public function newCalendar(string $owner, string $uri, string $tz = 'UTC', array $fields = []) : ICalendarModel
     {
+        $this->sabre->newVCalendar($owner, $uri, $tz);
         return $this->withSparkles(
-            $this->getImplementingClass(ICalendarModel::class)::createCalendar($owner, $uri), $fields);
+            $this->getImplementingClass(ICalendarModel::class)::construct($owner, $uri),
+            $fields
+        );
     }
 
-    public function event(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []): IEventModel
+    public function newEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []): IEventModel
     {
-        // was EventModel::createRecordFor()
-        // $event->sabre->createEvent(
-        //     $event->getParent()->getValue(static::F_ID),
-        //     $event->getValue(static::F_NAME),
-        //     $event->eventToCalDAV(),
-        //     $event->variationsToCalDAV()
-        // );
+        $vevent = $this->sabre->newVEvent(
+            $calendar->getValue(ICalendarModel::F_OWNER),
+            $calendar->getValue(ICalendarModel::F_URI),
+            $name,
+            $rrule,
+            $start
+        );
 
         return $this->withSparkles(
-            $this->getImplementingClass(IEventModel::class)::createEvent($calendar, $name, $rrule, $start), $fields);
+            $this->getImplementingClass(IEventModel::class)::construct($calendar, $vevent->UID->getValue()), $fields);
+    }
+
+    public function newVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel
+    {
+        return $this->withSparkles(
+            $this->getImplementingClass(IEventModel::class)::construct(
+                $event,
+                null,
+                $this->sabre->newExrule(
+                    $event->getValue(IEventModel::F_UID),
+                    $name,
+                    $rrule,
+                    \Babylcraft\Util::generateUid()
+                )
+            ),
+            $fields
+        );
+    }
+
+    public function eventFromVEvent(ICalendarModel $calendar, VEvent $vevent, array $fields = []) : IEventModel
+    {
+        return $this->withSparkles(
+            $this->getImplementingClass(IEventModel::class)::construct($calendar, $vevent), $fields);
+    }
+
+    public function create(IBabylonModel $model)
+    {
+        if ($model instanceof ICalendarModel) {
+            $this->sabre->createCalendar(
+                $model->getValue(ICalendarModel::F_OWNER),
+                $model->getValue(ICalendarModel::F_UR),
+                $model->getValue(IcalendarModel::F_TZ)
+            );
+        } else if ($model instanceof IEventModel) {
+            // was EventModel::createRecordFor()
+            // $event->sabre->createEvent(
+            //     $event->getParent()->getValue(static::F_ID),
+            //     $event->getValue(static::F_NAME),
+            //     $event->eventToCalDAV(),
+            //     $event->variationsToCalDAV()
+            // );
+        } else {
+
+        }
     }
 
     public function load(IBabylonModel $model)
     {
         if ($model instanceof ICalendarModel) {
-            // was CalendarModel::loadRecord()
-            // $this->loadVCalendar(
-            //     $this->sabre->getCalendarForOwner(
-            //         $this->getValue(ICalendarModel::F_OWNER),
-            //         $this->getValue(ICalendarModel::F_URI)
-            //     )
-            // );
+            $this->sabre->getCalendarForOwner(
+                $model->getValue(ICalendarModel::F_OWNER),
+                $model->getValue(ICalendarModel::F_URI)
+            );
 
             // \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$this->toVCalendar()->jsonSerialize()), "CalendarModel::doLoadRecord()");
         } else {
@@ -134,16 +179,9 @@ class ModelFactory implements IModelFactory
         }
     }
 
-    public function eventVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel
+    public function update(IBabylonModel $model)
     {
-        return $this->withSparkles(
-            $this->getImplementingClass(IEventModel::class)::createVariation($event, $name, $rrule), $fields);
-    }
 
-    public function eventFromVEvent(ICalendarModel $calendar, VEvent $vevent, array $fields = []) : IEventModel
-    {
-        return $this->withSparkles(
-            $this->getImplementingClass(IEventModel::class)::veventToEvent($calendar, $vevent), $fields);
     }
 
     protected function withSparkles(IBabylonModel $model, array $fields = []) : IBabylonModel

@@ -355,6 +355,13 @@ abstract class BabylonModel implements IBabylonModel
         return $this->getValue(self::F_CHILDREN)[$this->getModelFactory()->getImplementingClass($interface)] ?? null;
     }
 
+    protected function setReadonlyValues(array $kvpairs) : void
+    {
+        foreach ( $kvpairs as $field => $value ) {
+            $this->setReadOnlyValue($field, $value);
+        }
+    }
+
     protected function setReadOnlyValue(int $field, $value) : void
     {
         //validate against all EXCEPT read-only, throws exception on error
@@ -399,9 +406,9 @@ abstract class BabylonModel implements IBabylonModel
         $this->fields[$field][static::K_TYPE] = $type;
     }
 
-    protected static function setParent(IBabylonModel $parent, IBabylonModel $child) : void
+    protected function setParent(IBabylonModel $parent) : void
     {
-        $child->setValue(static::F_PARENT, $parent);
+        $this->setValue(static::F_PARENT, $parent);
     }
 
     public function getParent()

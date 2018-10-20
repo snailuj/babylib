@@ -12,46 +12,18 @@ use Babylcraft\WordPress\MVC\Model\SabreFacade;
 use Babylcraft\WordPress\MVC\Model\IBabylonModel;
 use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
 use Sabre\VObject\Component\VEvent;
+use Sabre\VObject\Property\ICalendar\Recur;
 
 
 class EventModel extends BabylonModel implements IEventModel
 {
     /**
-     * @var SabreFacade Object that makes the Sabre API more codey and 
-     * less iCalendary
-     */
-    private $sabre;
-
-    /**
-     * @var VEvent Underlying VObject representation of this event.
+     * @var VEvent Underlying VObject representation of this event. For delegating all the crazy
+     * recurrence logic to.
      */
     private $vevent;
 
     #region static
-    /**
-     * @see IModelFactory::event()
-     */
-    static public function createEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start) : IEventModel
-    {
-        return static::makeEvent($calendar, $name, $rrule, $start);
-    }
-
-    static public function fromVEvent(ICalendarModel $calendar, VEvent $vevent) : IEventModel
-    {   //vevent->SUMMARY is the same as the IEventModel::F_NAME property
-        //it's also copied into the 'uri' column in calendarobjects table on save(), so can be used
-        //as a unique key
-        \Babylcraft\WordPress\PluginAPI::warn("Creating variations from EXRULEs not implemented yet!");
-        return static::makeEvent($calendar, $vevent->SUMMARY, $vevent->RRULE, $vevent->DTSTART);
-    }
-
-    /**
-     * @see IModelFactory::eventVariation()
-     */
-    static public function createVariation(IEventModel $event, string $name, string $rrule) : IEventModel
-    {
-        return static::makeEvent($event, $name, $rrule, null);
-    }
-
     static public function getSchema(
         string $tableNamespace,
         string $wpTableNamespace,
@@ -64,32 +36,32 @@ class EventModel extends BabylonModel implements IEventModel
     //if $start is null, assumes we are creating a variation (because EXRULE doesn't support DTSTART parameters)
     //in that case, we will generate a UID for the variation (EXRULEs are all serialized into a single column on
     //the VEvent row in calendarobjects table, so we need something to reference them later)
-    static protected function makeEvent(
-        IBabylonModel $parent,
-        string $name,
-        string $rrule,
-        \DateTimeInterface $start = null,
-        string $uid = null
-    ) : IEventModel {
-        $fields = [
-            static::F_NAME   => $name,
-            static::F_RRULE  => $rrule,
-            static::F_START  => $start,
-            static::F_PARENT => $parent
-        ];
+    // static protected function makeEvent(
+    //     IBabylonModel $parent,
+    //     string $name,
+    //     string $rrule,
+    //     \DateTimeInterface $start = null,
+    //     string $uid = null
+    // ) : IEventModel {
+    //     $fields = [
+    //         static::F_NAME   => $name,
+    //         static::F_RRULE  => $rrule,
+    //         static::F_START  => $start,
+    //         static::F_PARENT => $parent
+    //     ];
 
-        $event = new static();
+    //     $event = new static();
 
-        if (!$start) {
-            $event->isVariation = true;
-            $event->setReadOnlyValue( static::F_UID, $uid ?? \Babylcraft\Util::generateUid() );
-        }
+    //     if (!$start) {
+    //         $event->isVariation = true;
+    //         $event->setReadOnlyValue( static::F_UID, $uid ?? \Babylcraft\Util::generateUid() );
+    //     }
 
-        $event->setParentType(get_class($parent));
-        $event->setValues($fields);
+    //     $event->setParentType(get_class($parent));
+    //     $event->setValues($fields);
 
-        return $event;
-    }
+    //     return $event;
+    // }
     #endregion
 
     #region IEventModel Implementation
@@ -97,9 +69,46 @@ class EventModel extends BabylonModel implements IEventModel
      * @var bool
      */
     private $isVariation = false;
+
+    /**
+     * @var callable Method to call when retrieving the underlying VEvent or Recur VObject
+     */
+    private $getVObject;
+
+    /**
+     * This class represents either Events (equivalent to VEvent objects in ICal parlance) or Event 
+     * variations (equiv to Recur objects).
+     */
+    public static function construct(IBabylonModel $parent, callable $getVObject)
+    {
+        $new = new static();
+        $new->setParentType(get_class($parent));
+        $new->setParent($parent);
+        $new->getVObject = $getVObject;
+
+        if ($vevent) {
+            $new->vevent = $vevent;
+            $new->setValues([
+                static::F_RRULE  => $vevent->RRULE->getValue(),
+                static::F_NAME   => $vevent->SUMMARY->getValue(),
+                static::F_START  => $vevent->DTSTART->getDateTime()
+            ]);
+
+            $new->setReadOnlyValue(static::F_UID, $vevent->UID->getValue());
+        } else {
+            $new->isVariation = true;
+            $new->vevent = $parent->vevent;
+            $new->setValue( static::F_NAME, $exrule->parameters()['URI']->getValue() );
+
+            $new->setReadOnlyValue( static::F_UID, $exrule->parameters()['UID']->getValue() );
+        }
+
+        return $new;
+    }
+
     public function addVariation(string $name, string $rrule, array $fields = []) : IEventModel
     {
-        return $this->addVariationModel($this->getModelFactory()->eventVariation($this, $name, $rrule, $fields));
+        return $this->addVariationModel($this->getModelFactory()->newVariation($this, $name, $rrule, $fields));
     }
 
     public function isVariation() : bool
@@ -109,12 +118,7 @@ class EventModel extends BabylonModel implements IEventModel
 
     public function getVariations() : IUniqueModelIterator
     {
-        return $this->getChildIterator($this->getVariationType());
-    }
-
-    protected function getVariationType() : string 
-    {
-        return IEventModel::class;
+        return $this->getChildIterator(IEventModel::class);
     }
 
     public function addVariationModel(IEventModel $variation) : IEventModel
@@ -198,12 +202,6 @@ class EventModel extends BabylonModel implements IEventModel
     #endregion
 
     #region overrides
-    public function configureDB(\PDO $pdo, \wpdb $wpdb, string $tableNamespace = 'babyl_', string $wpTableNamespace = 'wp_')
-    {
-        parent::configureDB($pdo, $wpdb, $tableNamespace, $wpTableNamespace);
-        $this->sabre = new SabreFacade($pdo, $tableNamespace);
-    }
-
     protected function setupFields() : void
     {
         parent::setupFields();
@@ -226,15 +224,39 @@ class EventModel extends BabylonModel implements IEventModel
 
     protected function doGetValue(int $field)
     {
-        if ($field === static::F_ID) {
-            if ($this->isVariation()) {
-                return $this->getValue(static::F_UID) ?? -1;
-            }
-
-            return $this->fields[static::F_ID][static::K_VALUE];
+        if ($this->isVariation) {
+            return $this->getValueFromRecurObject($field, $this->getVObject());
         }
 
-        return null;
+        return $this->getValueFromVEventObject($field, $this->getVObject());
+    }
+
+    protected function getValueFromRecurObject(int $field, Recur $recur)
+    {
+        switch ($field) {
+            case static::F_ID:
+                return $recur->parameters()['UID']->getValue();
+            case static::F_NAME:
+                return $recur->parameters()['URI']->getValue();
+            case static::F_RRULE:
+                return $recur->getValue();
+            default:
+                throw new FieldException(FieldException::ERR_NOT_FOUND, "field $field");
+        }
+    }
+
+    protected function getValueFromVEventObject(int $field, VEvent $vevent)
+    {
+        switch ($field) {
+            case static::F_ID:
+                return $vevent->UID->getValue();
+            case static::F_NAME:
+                return $vevent->SUMMARY->getValue();
+            case static::F_RRULE:
+                return $vevent->RRULE->getValue();
+            default:
+                throw new FieldException(FieldException::ERR_NOT_FOUND, "field $field");
+        }
     }
 
     protected function doCreateRecord() : bool
@@ -246,12 +268,7 @@ class EventModel extends BabylonModel implements IEventModel
 
     static protected function createRecordFor(IEventModel $event) : void
     {
-        $event->sabre->createEvent(
-            $event->getParent()->getValue(static::F_ID),
-            $event->getValue(static::F_NAME),
-            $event->eventToCalDAV(),
-            $event->variationsToCalDAV()
-        );
+        throw new ModelException(ModelException::ERR_OTHER, "mf-refactory not done yet");
     }
 
     protected function doUpdateRecord() : bool

@@ -4,6 +4,8 @@ namespace Babylcraft\WordPress\MVC\Model;
 
 use Sabre\CalDAV;
 use Sabre\VObject;
+use Sabre\VObject\Component\VCalendar;
+use Sabre\VObject\Component\VEvent;
 
 class SabreFacade
 {
@@ -22,6 +24,11 @@ class SabreFacade
 
     private $timezonePropName;
 
+    private $eventCache = [];
+    private $calendarCache = [];
+
+    #region Public
+
     public function __construct(\PDO $pdo, string $tableNamespace)
     {
         $this->caldav = new CalDAV\Backend\PDO($pdo);
@@ -34,18 +41,170 @@ class SabreFacade
         // $this->caldav->calendarSubscriptionsTableName = $tableNamespace . self::CALENDAR_SUBSCRIPTIONS_TABLENAME;
     }
 
-    public function createCalendar(string $owner, string $uri, string $tz = 'UTC') : array
+    public function newVCalendar(string $owner, string $uri, string $tz) : VCalendar
     {
-        return $this->caldav->createCalendar($owner, $uri, [ $this->timezonePropName => $tz ]);
+        return $this->addCachedCalendar(
+            new VCalendar([
+                "URI"          => $uri,
+                "PRINCIPALURI" => $owner,
+                $this->timezonePropName => $tz
+            ])
+        );
     }
 
-    public function getCalendarForOwner(string $owner, string $uri) : VObject\Component\VCalendar
+    public function newVEvent(
+        string $calendarOwner,
+        string $calendarUri,
+        string $name,
+        string $rrule = '',
+        \DateTimeInterface $start
+    ) : VEvent
+    {
+        if ( !$cached = $this->getCachedCalendar($calendarOwner, $calendarUri) ) {
+            throw new ModelException(
+                ModelException::ERR_RECORD_NOT_FOUND,
+                "SabreFacade doesn't know about ". $vcalendar->PRINCIPALURI ."/". $vcalendar->URI
+            );
+        }
+
+        return $this->addCachedEvent($cached->create("VEVENT", [
+            "SUMMARY" => $name,
+            "RRULE"   => $rrule,
+            "DTSTART" => $start
+        ]));
+    }
+
+    public function newExrule($eventUid, $name, $rrule, $uid) : Recur
+    {
+        if ( !$event = $this->getCachedEvent($eventUid) ) {
+            throw new ModelException(
+                ModelException::ERR_RECORD_NOT_FOUND,
+                "SabreFacade doesn't know about event with uid $eventUid"
+            );
+        }
+
+        return $event->add("EXRULE", $rrule, ["URI" => $name, "UID" => $uid]);
+    }
+
+    /**
+     * Loads the db record identified by the given owner and uri into the 
+     * facade cache and returns a callable that can (and should always) be used to
+     * access the cached VCalendar. DO NOT store the return value of this callable
+     * anywhere as it may be invalidated as a side effect of other functions in this
+     * class. This is done to avoid the performance hit of copying values out of 
+     * ICalendarModel into VCalendar and vice versa when loading or saving. I recognise
+     * the impurity of this mutable state. Fuck it.
+     * 
+     * @param string $owner The calendar owner (aka PRINCIPALURI)
+     * @param string $uri The calender URI
+     * 
+     * @return callable A function closure that can be used for retrieving
+     * the loaded VCalendar; do not store references to the VCalendar returned
+     * as it may be overwritten at any time
+     */
+    public function loadVCalendar(string $owner, string $uri) : callable
+    {
+        if ( $cached = $this->getCachedCalendar($owner, $uri) 
+            && $cached->ID
+        ) {
+            return $cached;
+        }
+        
+        if ($cached->ID) {
+            return $cached;
+        } else {
+            return 
+        }
+    }
+
+    /*
+    <?php
+    class Callee
+    {
+        public function getClosure(string $weaponName) : callable
+        {
+            return function() use ($weaponName) {
+                return $this->describeWeapon($weaponName);
+            };
+        }
+        
+        public function describeWeapon(string $weaponName) : string
+        {
+            return "lethal ". $weaponName;
+        }
+    }
+
+    class Caller
+    {
+        private $weaponGetter;
+        public function __construct(callable $weaponGetter)
+        {
+            $this->weaponGetter = $weaponGetter;
+        }
+        
+        public function printWeapon()
+        {
+            echo "I have a ". ($this->weaponGetter)();
+        }
+    }
+
+    $caller = new Caller((new Callee())->getClosure("labrys"));
+    $caller->printWeapon();
+    */
+    #endregion
+
+    #region VObject caching (Private)
+    private function getCachedCalendar(string $owner, string $uri) : ?VCalendar
+    {
+        return $this->calendarCache[$owner ."/". $uri] ?? null;
+    }
+
+    private function getCachedEvent(string $uid) : ?VEvent
+    {
+        return $this->eventCache[$uid] ?? null;
+    }
+
+    private function addCachedCalendar(VCalendar $vcalendar, bool $checkUnique = true) : VCalendar
+    {
+        if ( $checkUnique 
+            && null !== ($cached = $this->calendarCache[$this->getCalendarPath($vcalendar)] ?? null) 
+        ) {
+            throw new ModelException(ModelException::ERR_UNIQUE_VIOLATION, 
+                "owner = ". $vcalendar->PRINCIPALURI->getValue() 
+                .", uri = ". $vcalendar->URI->getValue());
+        }
+
+        return $this->calendarCache[$this->getCalendarPath($vcalendar)] = $vcalendar;
+    }
+
+    private function addCachedEvent(VEvent $vevent) : VEvent
+    {
+        if (null !== ($cached = $this->eventCache[$vevent->UID->getValue()] ?? null) ) {
+            throw new ModelException(ModelException::ERR_UNIQUE_VIOLATION, "uid = ". $vevent->uid);
+        }
+
+        return $this->eventCache[$vevent->UID->getValue()] = $vevent;
+    }
+
+    private function getCalendarPath(VCalendar $vcalendar) : string
+    {
+        return $vcalendar->PRINCIPALURI->getValue() .'/'. $vcalendar->URI->getValue();
+    }
+    #endregion
+
+    #region CalDAV interactions (Private)
+    private /* was public pre-MF refactor */ function createCalendar(string $owner, string $uri, string $tz = 'UTC') : array
+    {
+        return $this->caldav->createCalendar($owner, $uri, [ $this->timezonePropName => $tz ]);
+    }    
+
+    private function getCalendarForOwner(string $owner, string $uri) : ?VCalendar
     {   //no more performant way to do this that I can find with the weird CalDAV API
         $calendars = $this->getCalendarsForOwner($owner);
         return $calendars[$uri] ?? null;
     }
 
-    public function getCalendarsForOwner(string $owner) : array
+    private function getCalendarsForOwner(string $owner) : array
     {
         $calendars = [];
         foreach ( $this->caldav->getCalendarsForUser($owner) as $calendarInfo ) {
@@ -188,7 +347,7 @@ class SabreFacade
      * @return Sabre\VObject\Component\VCalendar    iCalendar dictates that every object must be wrapped in a VCalendar. saveEvent()->VEVENT will
      *                                              hold the CalDAV representation of the actual event that was added.
      */
-    public function createEvent( array $calendarId, string $uri, array $event, array $variations = [] ) : VObject\Component\VCalendar
+    private function createEvent( array $calendarId, string $uri, array $event, array $variations = [] ) : VObject\Component\VCalendar
     {
         //\Babylcraft\WordPress\PluginAPI::debugContent([$event, $variations], "::createEvent() [event, variations] = ");
         $root = new VObject\Component\VCalendar([ "VEVENT" => $event ], $defaults = false);
@@ -208,6 +367,7 @@ class SabreFacade
 
         return $root;
     }
+    #endregion
 
     #region Schema Definition
     /**

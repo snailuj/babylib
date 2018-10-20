@@ -13,8 +13,8 @@ interface IEventModel extends IBabylonModel
     const F_UID   = 0x8;
 
     const EVENT_FIELDS = [
-        //RRULE doesn't have a K_NAME, but it IS stored and serialized natch -- through CalDAV, not our normal structure
         self::F_NAME        => [ self::K_TYPE => self::T_STRING,            self::K_NAME  => 'uri',                              ],
+        //RRULE doesn't have a K_NAME, but it IS stored and serialized natch -- through CalDAV, not our normal structure
         self::F_RRULE       => [ self::K_TYPE => self::T_STRING,                                        self::K_OPTIONAL => true ],
         self::F_START       => [ self::K_TYPE => \DateTimeImmutable::class, self::K_NAME  => 'dtstart', self::K_OPTIONAL => true ],
         self::F_UID         => [ self::K_TYPE => self::T_STRING,            self::K_NAME  => 'uid',     self::K_MODE => 'r'      ],

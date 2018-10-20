@@ -13,21 +13,11 @@ use Babylcraft\WordPress\MVC\Model\IEventModel;
 use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\SabreFacade;
 use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
+use Sabre\VObject\Component\VCalendar;
 
 class CalendarModel extends BabylonModel implements ICalendarModel
 {
     #region Static
-    static public function createCalendar(string $owner, string $uri) : ICalendarModel
-    {
-        $cal = new CalendarModel();
-        $cal->setValues([
-            ICalendarModel::F_OWNER => $owner,
-            ICalendarModel::F_URI   => $name
-        ]);
-
-        return $cal;
-    }
-
     static public function getSchema(
         string $tableNamespace,
         string $wpTableNamespace,
@@ -36,33 +26,20 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     {
         return SabreFacade::getSchema($tableNamespace, $wpTableNamespace, $charsetCollate, $drop);
     }
+
+    static public function construct(
+        
+    )
     #endregion
 
     #region ICalendarModel implementation
-    /**
-     * @var SabreFacade Object that makes the Sabre API more codey and 
-     * less iCalendary
-     */
-    private $sabre;
-
-    /**
-     * @var Sabre\VObject\VCalendar Backing object that stores data in a format
-     * that can be saved using CalDAV
-     */
-    protected $vcalendar;
-
-    /**
-     * @var array The calendar DB ID as CalDAV understands it
-     */
-    private $calendarId = -1;
-    
     /**
      * @see ICalendarModel::addEvent()
      */
     public function addEvent(string $name, string $rrule = '', \DateTimeInterface $dtStart) : IEventModel
     {
         return $this->addEventModel(
-            $this->getModelFactory()->event($this, $name, $rrule, $dtStart));
+            $this->getModelFactory()->newEvent($this, $name, $rrule, $dtStart));
     }
 
     /**
@@ -73,13 +50,19 @@ class CalendarModel extends BabylonModel implements ICalendarModel
         return $this->getChildIterator($this->getEventType());
     }
 
-    public function toVCalendar(): VObject\Component\VCalendar
+    protected function loadVCalendar(VObject\Component\VCalendar $vcalendar) : void
     {
-        if (!$this->vcalendar) {
-            $this->vcalendar = new VObject\Component\VCalendar($this->calendarToCalDAV());
-        }
+        $this->setValue(static::F_TZ, $vcalendar->TZID->getValue());
+        $this->setReadonlyValues([
+            static::F_URI   => $vcalendar->URI->getValue(),
+            static::F_OWNER => $vcalendar->PRINCIPALURI->getValue()
+        ]);
 
-        return $this->vcalendar;
+        foreach( $vcalendar->VCALENDAR as $vcalendar ) {
+            foreach( $vcalendar->VEVENT as $vevent ) {
+                $this->loadVEvent($vevent);
+            }
+        }
     }
 
     protected function getEventType() : string
@@ -90,22 +73,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     protected function addEventModel(IEventModel $eventModel) : IEventModel
     {
         $this->addChild($eventModel->getValue(IEventModel::F_NAME), $eventModel);
-        $this->toVCalendar()->add($eventModel->toVEvent());
-        //unset the iterator because we have added a new period that may change the results
-        $this->veventIterator = null;
-
         return $eventModel;
-    }
-
-    protected function loadVCalendar(VObject\Component\VCalendar $vcalendar) : void
-    {
-        $this->vcalendar = $vcalendar;
-        $this->setValue(static::F_TZ, $vcalendar->TZID->getValue());
-        foreach( $vcalendar->VCALENDAR as $vcalendar ) {
-            foreach( $vcalendar->VEVENT as $vevent ) {
-                $this->loadVEvent($vevent);
-            }
-        }
     }
 
     protected function loadVEvent(VObject\Component\VEvent $vevent) : void
@@ -120,7 +88,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
     protected function getVEventIterator() : VObject\Recur\EventIterator
     {
         if (!$this->veventIterator) {
-            $this->veventIterator = new VObject\Recur\EventIterator($this->toVCalendar()->select("VEVENT"));
+            $this->veventIterator = new VObject\Recur\EventIterator($this->vcalendar->select("VEVENT"));
         }
 
         return $veventIterator;
@@ -161,7 +129,7 @@ class CalendarModel extends BabylonModel implements ICalendarModel
             )
         );
 
-        \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$this->toVCalendar()->jsonSerialize()), "CalendarModel::doLoadRecord()");
+        \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$this->vcalendar->jsonSerialize()), "CalendarModel::doLoadRecord()");
 
         return true;
     }
