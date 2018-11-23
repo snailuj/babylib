@@ -50,42 +50,25 @@ abstract class BabylonModel implements IBabylonModel
     }
     #endregion
 
-    #region IBabylonModel Implementation
+    #region IBabylonModel implementation
     /**
      * Load from storage via F_ID
      * @see IBabylonModel::loadRecord()
      */
-    public function loadRecord() : void
+    public function hydrate() : void
     {
-        if (!$this->doLoadRecord()) {
-            if ($this->getId() == static::DEFAULT_ID) {
-                throw new ModelException(ModelException::ERR_NO_ID);
-            }
-
-            //do default load process
-        }
-
+        $this->doHydrate();
         $this->dirty = false;
     }
 
     /**
-     * @see IBabylonModel::save()
+     * @see IDataMapper::save()
      */
     public function save(bool $recurse = true) : void
     {
         if ( $this->isDirty() ) {
             $this->allValid();
-
-            if( $this->getValue(self::F_ID) == -0x1 ) {
-                if (!$this->doCreateRecord()) {
-                    //do default create logic
-                    $this->getInsertStatement()->execute($this->getSerializable());
-                }
-            } else {
-                if (!$this->doUpdateRecord()) {
-                    //do default update logic
-                }
-            }
+            $this->getModelFactory()->persist($this);
 
             $this->dirty = false;
         }
@@ -93,66 +76,6 @@ abstract class BabylonModel implements IBabylonModel
         if ( $recurse ) {
             $this->saveChildren($recurse);
         }
-    }
-
-    public function getFieldType(int $field) : ?string
-    {
-        if ($field = $this->fields[$field] ?? null) {
-            return $field[static::K_TYPE] ?? null;
-        }
-
-        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
-    }
-
-    public function getFieldName(int $field) : ?string
-    {
-        if ($field = $this->fields[$field] ?? null) {
-            return $field[static::K_NAME] ?? null;
-        }
-
-        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
-    }
-
-    public function getFieldMode(int $field) : string
-    {
-        if ($field = $this->fields[$field] ?? null) {
-            return $field[static::K_MODE] ?? 'rw';
-        }
-
-        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
-    }
-
-    public function isFieldOptional(int $field) : bool
-    {
-        if ($field = $this->fields[$field] ?? null) {
-            return ($optional = $field[static::K_OPTIONAL] ?? false) && $optional;
-        }
-
-        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
-    }
-
-    /**
-     * @see IBabylonModel::getFields()
-     */
-    public function getFields() : array
-    {
-        return $this->fields;
-    }
-
-    /**
-     * @see IBabylonModel::getSerializable()
-     */
-    public function getSerializable() : array
-    {   //override in subclasses if you need to trim / augment values for serialization
-        $map = [];
-        foreach( $this->fields as $field => $fieldDef ) {
-            if (isset($fieldDef[static::K_NAME])) { //if K_NAME is not set then it's a transient prop
-                //\Babylcraft\WordPress\PluginAPI::debug("getSerializable() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
-                $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
-            }
-        }
-
-        return $map;
     }
 
     /**
@@ -168,20 +91,22 @@ abstract class BabylonModel implements IBabylonModel
      */
     public function getValue(int $field)
     {
-        if ( null === ($val = $this->doGetValue($field)) ) {
-            //null indicates "run default getValue logic"
-            $val = $this->fields[$field]['value'] ?? null;
-        }
-
-        return $this->isNull($val) ? null : $val;
+        return $this->isNull($val = $this->doGetValue($field)) ? null : $val;
     }
 
-    /**
-     * @see IBabylonModel::hasField()
-     */
-    public function hasField(int $field) : bool
+    public function setParent(IBabylonModel $parent) : void
     {
-        return array_key_exists($field, $this->getFields());
+        $this->setValue(static::F_PARENT, $parent);
+    }
+
+    public function getParent()
+    {
+        return $this->getValue(static::F_PARENT) ?? null;
+    }
+
+    public function setModelFactory(IModelFactory $modelFactory) : void
+    {
+        $this->modelFactory = $modelFactory;
     }
 
     /**
@@ -217,7 +142,20 @@ abstract class BabylonModel implements IBabylonModel
             throw new FieldException(FieldException::ERR_NOT_FOUND, "Child is not of a declared child type for this model. ");
         }
 
+        $child->setParent($this);
         $iter[$key] = $child;
+    }
+
+    public function addChildren(array $children) : void
+    {
+        foreach ( $children as $child ) {
+            $this->addChild($this->getChildKey($child), $child);
+        }
+    }
+
+    protected function getChildKey(IBabylonModel $child)
+    {
+        return $child->getId();
     }
 
     /**
@@ -235,21 +173,163 @@ abstract class BabylonModel implements IBabylonModel
      */
     public function setValue(int $field, $value) : void
     {
+        //TODO optimise here by only setting the dirty flag if the value is actually different
+        //requires equality comparisons
+
         //validate against all validatable errors, throws exception if invalid
         $this->validate($field, $value);
         $this->doSetValue($field, $value);
+        $this->isDirty = true;
     }
     #endregion
 
-    #region QoL methods for subclasses
+    #region IDataMapper Implementation
+    public function getFieldType(int $field) : ?string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_TYPE] ?? null;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    public function getFieldName(int $field) : ?string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_NAME] ?? null;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    public function getFieldNames(int $fieldPack) : array
+    {
+        $names = [];
+        foreach ($this->fields as $code => $defn ) {
+            if ($code & $fieldPack !== 0) {
+                $names[] = $defn[static::K_NAME];
+            }
+        }
+
+        return $names;
+    }
+
+    public function getFieldMode(int $field) : string
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return $field[static::K_MODE] ?? 'rw';
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    public function isFieldOptional(int $field) : bool
+    {
+        if ($field = $this->fields[$field] ?? null) {
+            return ($optional = $field[static::K_OPTIONAL] ?? false) && $optional;
+        }
+
+        throw new FieldException(FieldException::ERR_NOT_FOUND, "given field $field");
+    }
+
+    public function getRecordName(): string
+    {
+        return $this->getValue(IDataMapper::F_TABLE_NAME);
+    }
+
+    /**
+     * @see IDataMapper::getFields()
+     */
+    public function getFields() : array
+    {
+        return $this->fields;
+    }
+
+    /**
+     * @see IDataMapper::hasField()
+     */
+    public function hasField(int $field) : bool
+    {
+        return array_key_exists($field, $this->getFields());
+    }
+
+    /**
+     * @see IDataMapper::getSerializable()
+     */
+    public function getSerializable(int $byFieldPack = 0) : array
+    {   //override in subclasses if you need to trim / augment values for serialization
+        $map = [];
+        foreach( $this->fields as $field => $fieldDef ) {
+            if ( 
+                //include a value only if K_NAME is set (if not set it's a transient prop)
+                isset($fieldDef[static::K_NAME]) &&
+                //F_PARENT has special handling below this loop, so ignore in here
+                $field != static::F_PARENT &&
+                //and if the field's code is present in the bit-pack
+                ($byFieldPack == 0 || ($field & $byFieldPack !== 0))
+            ) {
+                //\Babylcraft\WordPress\PluginAPI::debug("getSerializable() : field number: ". $field ." has name ". $fieldDef[static::K_NAME]);
+                $map[$fieldDef[static::K_NAME]] = $this->getValue($field);
+            }
+        }
+
+        //extract parent id from the parent object if one is defined
+        if (null != ($parentFieldName = $model->getFieldName(IDataMapper::F_PARENT))) {
+            if (null == $model->getParent()) {
+                throw new FieldException(FieldException::ERR_IS_NULL, "parent is required when serializing ". get_class($model));
+            }
+
+            $map[$parentFieldName] = $this->getParent()->getId();
+        }
+
+        return $map;
+    }
+
+    /**
+     * @see IDataMapper::loadSerializeable()
+     */
+    public function loadSerializeable(array $values) : void
+    {
+        $patch = [];
+        foreach ( $this->fields as $field => $fieldDef ) {
+            if ( isset($fieldDef[static::K_NAME]) && //if this field has a K_NAME
+                //and it's not F_PARENT (not handled by a simple deserialize)
+                $field != static::F_PARENT &&
+                //and is not read-only
+                (!isset($fieldDef[static::K_MODE]) || $fieldDef[static::K_MODE] == 'r') &&
+                //and there is a value in $values with that key
+                 isset($values[$fieldDef[static::K_NAME]])
+            ) { //then add to the patch
+                $patch[$fieldDef[static::K_NAME]] = $values[$fieldDef[static::K_NAME]];
+            }
+        }
+
+        $this->setValues($patch);
+    }
+
+    public function getUpdateableNames() : array
+    {
+        $idName = $this->getFieldName(static::F_ID);
+        return array_filter(
+            $this->fields,
+            function($field) {
+                return (null != $field[IDataMapper::K_NAME] ?? null)
+                    && $field[IDataMapper::K_NAME] !== $idName;
+            }
+        );
+    }
+    #endregion
+
+    #region protected
     protected function setupFields() : void
     {
         $this->addFields(self::FIELDS_DEFAULT);
     }
 
-    protected function doLoadRecord() : bool
+    protected function doHydrate() : void
     {
-        ; //TODO consider making all these doStuff() functions abstract once the behaviour is more fleshed out
+        //do default load process
+        $this->getModelFactory()->hydrate($this);
     }
 
     /**
@@ -273,16 +353,6 @@ abstract class BabylonModel implements IBabylonModel
         }
     }
 
-    protected function doCreateRecord() : bool
-    {
-        return false; //fallback on default create() above
-    }
-
-    protected function doUpdateRecord() : bool
-    {
-        return false; //fallback on default update() above
-    }
-
     protected function saveChildren($recurse = true) : void
     {
         foreach ( $this->getChildIterators() as $iter ) {
@@ -292,45 +362,9 @@ abstract class BabylonModel implements IBabylonModel
         }
     }
 
-    /**
-     * Return null from this function ONLY to indicate that you are not interested in overriding
-     * the given field -- the calling function will take that as a flag to run the default getValue
-     * logic.
-     * 
-     * If you need to indicate a valid null value for the given field, then return T_NULL instead.
-     */
     protected function doGetValue(int $field)
     {
-        return null; //fallback on default getValue() above
-    }
-
-    /**
-     * @var \PDOStatement
-     */
-    private $insertStmt = null;
-    protected function getInsertStatement() : \PDOStatement
-    {
-        $names = [];
-        $values = [];
-        if (!$this->insertStmt) {
-            foreach( $this->fields as $code => $defn ) {
-                if ( $name = $defn[static::K_NAME] ?? null) {
-                    $names[]  = $name;
-                    $values[] = ':'. $name;
-                }
-            }
-
-            $sql = sprintf(
-                'INSERT INTO %s (%s) VALUES (%s)',
-                $this->tableNamespace . $this->getValue(static::F_TABLE_NAME),
-                implode(', ', $names),
-                implode(', ', $values)
-            );
-
-            $this->insertStmt = $this->pdo->prepare($sql);
-        }
-
-        return $this->insertStmt;
+        return $this->fields[$field][static::K_VALUE] ?? null;;
     }
 
     /**
@@ -352,7 +386,7 @@ abstract class BabylonModel implements IBabylonModel
      */
     protected function getChildIterator(string $interface) : ?IUniqueModelIterator
     {
-        return $this->getValue(self::F_CHILDREN)[$this->getModelFactory()->getImplementingClass($interface)] ?? null;
+        return $this->getValue(self::F_CHILDREN)[$interface] ?? null;
     }
 
     protected function setReadonlyValues(array $kvpairs) : void
@@ -367,6 +401,7 @@ abstract class BabylonModel implements IBabylonModel
         //validate against all EXCEPT read-only, throws exception on error
         $this->validate($field, $value, FieldException::ALL_VALIDATABLE & ~FieldException::ERR_READ_ONLY);
         $this->doSetValue($field, $value);
+        $this->dirty = true;
     }
 
     protected function doSetValue(int $field, $value) : void
@@ -406,29 +441,9 @@ abstract class BabylonModel implements IBabylonModel
         $this->fields[$field][static::K_TYPE] = $type;
     }
 
-    protected function setParent(IBabylonModel $parent) : void
-    {
-        $this->setValue(static::F_PARENT, $parent);
-    }
-
-    public function getParent()
-    {
-        return $this->getValue(static::F_PARENT) ?? null;
-    }
-
-    public function setModelFactory(IModelFactory $modelFactory) : void
-    {
-        $this->modelFactory = $modelFactory;
-    }
-
     protected function getModelFactory() : IModelFactory
     {
         return $this->modelFactory;
-    }
-
-    protected function getBabylTablePrefix() : string
-    {
-        return $this->getTablePrefix() .'_'. $this->tableNamespace;
     }
     #endregion
 
@@ -492,7 +507,10 @@ abstract class BabylonModel implements IBabylonModel
         }
 
         if ($errors !== FieldException::NONE && $throw) {
-            $message = "Validating field $field, having K_TYPE = $ftype, with value $value of type $vtype";
+            $message =
+                "Validating field $field, having K_TYPE = $ftype, with value of type $vtype
+                \nDumping value
+                \n". print_r($value, true);
             throw new FieldException($errors, $message);
         }
 

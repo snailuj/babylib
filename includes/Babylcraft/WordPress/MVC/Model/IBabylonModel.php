@@ -6,68 +6,21 @@ namespace Babylcraft\WordPress\MVC\Model;
 use Babylcraft\WordPress\MVC\Model\Impl\UniqueModelIterator;
 
 
-interface IBabylonModel 
+/**
+ * TODO stop extending IMappedRecord here (requires a pretty major refactor because these
+ * two interfaces are used interchangeably in some bits of code -- they used to be a single
+ * interface).
+ */
+interface IBabylonModel extends IDataMapper
 {
-    /**
-     * Use these datatypes when setting the allowed type of a field (mostly just replicating the possible return values from PHP's 
-     * kinda lame gettype() function in case they change in future)
-     */
-    const T_NULL   = 'NULL',
-          T_INT    = 'integer',
-          T_STRING = 'string',
-          T_BOOL   = 'boolean',
-          T_DATE   = \DateTime::class,
-          T_OBJECT = 'object',
-          T_ARRAY  = 'array',
-          T_MODEL_ITER = IUniqueModelIterator::class;
-
-    /**
-     * K_ constants are strings used to define keys into the `$fields[F_*]` array
-     */
-    const K_NAME     = 'name', //accesses the persistence and/or serialization name of a given field - leave unset for transient properties
-          K_TYPE     = 'type', //accesses the data type of a given field
-          K_VALUE    = 'value', //accesses the field's actual value
-          K_MODE     = 'mode', //accesses the read / read-write mode of the field (all code assumes 'rw' unless set to 'r')
-          K_OPTIONAL = 'optional'; //accesses whether or not the field is optional (all code assumes not unless set to true)
-
-    /**
-     * F_ constants are ints that define keys for fields that all IBabylonModel implementations share
-     */
-    const F_ID          = -0x1,
-          F_PARENT      = -0x2,
-          F_CHILDREN    = -0x3,
-          F_CHILD_TYPES = -0x4,
-          F_TABLE_NAME  = -0x5;
-
-
-    const DEFAULT_ID = -1;
-
-    /**
-     * Here we make an array out of those shared fields and set their default properties.
-     * Properties that do not have a value for self::K_NAME will NOT be serialized or 
-     * persisted.
-     * 
-     * @var array
-     */
-    const FIELDS_DEFAULT = [
-        //-1 indicates not created in DB yet
-        self::F_ID          => [ self::K_NAME => 'id', self::K_TYPE => self::T_INT,    self::K_VALUE    => self::DEFAULT_ID, self::K_MODE => 'r' ],
-        self::F_PARENT      => [                                                       self::K_OPTIONAL => true                                  ],
-        self::F_CHILDREN    => [                       self::K_TYPE => self::T_ARRAY,  self::K_OPTIONAL => true                                  ],
-        self::F_CHILD_TYPES => [                       self::K_TYPE => self::T_ARRAY,  self::K_OPTIONAL => true                                  ],
-        self::F_TABLE_NAME  => [                       self::K_TYPE => self::T_STRING, self::K_OPTIONAL => true                                  ]
-    ];
-
-    function setModelFactory(IModelFactory $modelFactory) : void;
-
     /**
      * Load a Model from storage via F_ID
      * 
      * @throws ModelException ERR_RECORD_NOT_FOUND if data is not found for this model
-     * using the value of F_ID, ERR_NO_ID if F_ID has not been changed from
-     * the default (-1)
+     * using the value of F_ID, ERR_NO_ID if F_ID has not been changed from the default (-1)
+     * @throws FieldException|PDOException
      */
-    function loadRecord() : void;
+    function hydrate() : void;
     
     /**
      * Saves the instance to whatever storage mechanism was supplied to the
@@ -85,71 +38,24 @@ interface IBabylonModel
     function getParent();
 
     /**
+     * Sets the model's parent model. Will be validated as of the correct declared class
+     * type according to the settings in F_PARENT.
+     * 
+     * TODO when / if the "big refactor" happens to a proper DataMapper pattern, this 
+     * get/set pair would belong on the IDataMapper interface, but that would involve
+     * passing in something other than an IBabylonModel as $parent (because IDataMapper
+     * shouldn't know about that interface). So, it would be more like DECLARING the 
+     * parent type (and tying that back the K_TYPE of the F_PARENT field etc).
+     * The IDataMapper graph should basically be an in-memory representation of the data
+     * schema, potentially defined by parsing XML / SQL definitions in a file. Definitely
+     * TBD only when absolutely necessary!
+     */
+    function setParent(IBabylonModel $parent);
+
+    /**
      * Return the model's ID (or -1 if not saved yet)
      */
     function getId();
-
-    /**
-     * Returns an array of all field definitions defined by this Model.
-     * The array is keyed by field to facilitate faster lookups.
-     * 
-     * @return array An array of full field definitions, including such things as
-     * name, type, mode etc if they are specified for the field in question.
-     */
-    function getFields() : array;
-
-    /**
-     * Returns the type of the field identified by the given field code. This will be either
-     * one of the T_* values in this interface, a fully-qualified class / interface name, or
-     * null if not set.
-     * 
-     * @param int $field The numeric code for the field you wish to get the type for
-     */
-    function getFieldType(int $field) : ?string;
-
-    /**
-     * Returns the storage / serialization name of the field identified by the given field 
-     * code, or null if not set.
-     * 
-     * @param int $field The numeric code for the field you wish to get the name for
-     */
-    function getFieldName(int $field) : ?string;
-
-    /**
-     * Returns the read/read-write mode of the field identified by the given field 
-     * code.
-     * 
-     * @param int $field The numeric code for the field you wish to get the mode for
-     */
-    function getFieldMode(int $field) : ?string;
-
-    /**
-     * Returns true if the field identified by the given field code is optional, false
-     * otherwise.
-     * 
-     * @param int $field The numeric code for the field you wish to check is optional
-     */
-    function isFieldOptional(int $field) : bool;
-
-    /**
-     * Returns an array of all fields as a single-dimensional array in the form
-     * [$fields[<field id>][<K_NAME>] => $value]. Compare this with ::getFields(), which 
-     * returns full field definitions. Implementing classes may also filter the fields 
-     * depending on whether or not the fields should be serialized when remoting to / from 
-     * client-side apps.
-     * 
-     * If a field does not have a value for K_NAME, it will be filtered from the returned
-     * results.
-     * 
-     * @return array An array of field key => value pairs
-     */
-    function getSerializable() : array;
-
-    /**
-     * Returns true or false depending on whether this Model has a definition
-     * for the given field key.
-     */
-    function hasField(int $field) : bool;
 
     /**
      * Returns an array of fully-qualified interface names that represent child Model types
@@ -191,6 +97,17 @@ interface IBabylonModel
      * exists at position $key
      */
     function addChild($key, IBabylonModel $child) : void;
+
+    /**
+     * Adds a child uniquely identified by $key to the list of children.
+     * 
+     * @param $key The key of the child object
+     * @param $child The child object to add
+     * 
+     * @throws FieldException ERR_UNIQUE_VIOLATION if a child of that type already
+     * exists at position $key
+     */
+    function addChildren(array $children) : void;
 
     /**
      * Sets the field referred to by $field to the value contained in $value.
