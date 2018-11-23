@@ -262,4 +262,11 @@ abstract class Node
     // @codeCoverageIgnoreEnd
 
     /* }}} */
+
+    #region Babylcraft added
+    public function getRoot() : Node
+    {
+        return $this->root;
+    }
+    #endregion
 }

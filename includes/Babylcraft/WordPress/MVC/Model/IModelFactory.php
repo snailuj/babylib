@@ -34,6 +34,22 @@ interface IModelFactory
      */
     function getModelInterface(IBabylonModel $model) : string;
 
+    function persist(IBabylonModel $model) : void;
+
+    /**
+     * Loads data into the given model by its ID, throws exception if no ID is present.
+     */
+    function hydrate(IBabylonModel $model) : void;
+
+    /**
+     * Query the data-store for all data that are children of the given model having type $childInterfaceName. 
+     * Child *Model objects that implement $childInterfaceName will then be created for each record retrieved,
+     * and hydrated with the queried data.
+     * 
+     * Leave $childInterfaceName blank to load children of all types that belong to $model.
+     */
+    function newHydratedChildren(IBabylonModel $model, ?string $childInterfaceName = null) : void;
+
     /**
      * Creates a new ICalendarModel. Multiple calendars can be specified with differing $uri for the 
      * same $owner, and multiple $owners can have calendars with the same $uri. But $uri and $owner must together 
@@ -52,33 +68,24 @@ interface IModelFactory
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as an event on the 
      * ICalendarModel given in the first arg.
      * 
-     * @param ICalendarModel $calendar Calendar to which you wish to add a event
+     * @param ICalendarModel $parent Calendar to which you wish to add a event
      * @param string $name Name of the event, can be any string
      * @param string $rrule Recurrence rule for the event
      * @param \DateTime $start Date and time of the event start
-     * @param [array] $fields Optional fields to be set during instantiation
      * 
      * @return IEventModel The IEventModel object that represents the event
      */
-    function newEvent(ICalendarModel $calendar, string $name, string $rrule, \DateTimeInterface $start, array $fields = []) : IEventModel;
+    function newEvent(ICalendarModel $parent, string $name, string $rrule, \DateTimeInterface $start, string $uid) : IEventModel;
 
     /**
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as a variation
      * to the IEventModel given in first arg.
      * 
-     * @param IEventModel $event Event to which you wish to add a variation
+     * @param IEventModel $parent Event to which you wish to add a variation
      * @param string $name Name of the variation, can be any string
      * @param string $rrule Recurrence rule for the variation
-     * @param [array] $fields Optional fields to be set during instantiation
      * 
      * @return IEventModel The IEventModel object that represents the variation
      */
-    function newVariation(IEventModel $event, string $name, string $rrule, array $fields = []) : IEventModel;
-
-    /**
-     * Returns an IEventModel representation of the given Sabre VEvent object. If any EXRULEs are defined
-     * on the VEvent, IEventModel representations will be created for them too, and added to the returned
-     * IEventModel as variations.
-     */
-    function eventFromVEvent(ICalendarModel $calendar, VEvent $vevent, array $fields = []) : IEventModel;
+    function newVariation(IEventModel $parent, string $name, string $rrule, string $uid) : IEventModel;
 }

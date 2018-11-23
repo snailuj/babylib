@@ -121,17 +121,22 @@ abstract class BabylonPlugin implements IBabylonPlugin, IControllerContainer
             throw new PluginConfigurationException(PluginConfigurationException::ERROR_PLUGIN_ALREADY_ACTIVE, $this);
         }
 
+        $exception = null;
         try {
             $this->doActivate();
             $this->activateControllers();
         } catch (BabylonPluginException $ex) {
             $ex->addErrorCode(BabylonPluginException::ERR_ACTIVATION_FAILED);
-            throw $ex;
+            $exception = $ex;
         } catch (\PDOException $ex) {
             //catch these so that we can rollback tables and throw BabylonPluginException instead because security
             $this->error($ex->getMessage());
+            $exception = new BabylonPluginException(BabylonPluginException::ERR_PDO_EXCEPTION, $this);
+        }
+
+        if ($exception) {
             $this->doDeactivate(); //rollback
-            throw new BabylonPluginException(BabylonPluginException::ERR_PDO_EXCEPTION, $this);
+            throw $exception;
         }
         
         $this->info($this->config->getPluginName() ." activated ");

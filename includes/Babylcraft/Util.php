@@ -2,6 +2,9 @@
 
 namespace Babylcraft;
 
+use Babylcraft\WordPress\MVC\Model\ModelException;
+
+
 class Util
 {
     /**
@@ -24,5 +27,20 @@ class Util
                 .chr(125);// "}"
             return $uuid;
         }
+    }
+
+    static public function newModelPDOException(\PDOException $e, \PDOStatement $statement = null) : ModelException
+    {
+        if ($statement != null) {
+            $context = "when executing statement, dumping info "
+                ."\n[SQLSTATE] ". $statement->errorCode
+                ."\n[INFO]     ". $statement->errorInfo
+                ."\n[PARAMS]   ";
+            ob_start();
+            $statement->debugDumpParams();
+            $context .= ob_get_clean();
+        }
+
+        return new ModelException(ModelException::ERR_PDO_EXCEPTION, $context);
     }
 }

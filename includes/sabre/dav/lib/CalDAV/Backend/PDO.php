@@ -345,6 +345,21 @@ SQL
 
     }
 
+    function updateCalendarSimple(string $owner, string $uri, array $fields)
+    {
+        foreach ( $fields as $fieldName => $value ) {
+            $valuesSql = $fieldName ." = ?";
+        }
+
+        $stmt = $this->pdo->prepare(
+            "UPDATE ". $this->calendarInstancesTableName 
+            ." SET ". implode(', ', $valuesSql) ." WHERE principaluri = ? AND uri = ?");
+        $fields['principaluri'] = $owner;
+        $fields['uri'] = $uri;
+
+        $stmt->execute(array_values($fields));
+    }
+
     /**
      * Delete a calendar and all it's objects
      *
@@ -492,6 +507,44 @@ SQL
 
     }
 
+    function getObjectFromCalendarPath(string $calendarOwner, string $calendarUri, string $objectUri)
+    {
+        $stmt = $this->pdo->prepare(<<<SQL
+            SELECT
+                o.id,
+                o.uri,
+                o.lastmodified,
+                o.etag,
+                o.calendarid,
+                o.size,
+                o.calendardata,
+                o.componenttype 
+            FROM
+                {$this->calendarObjectTableName} o 
+                    INNER JOIN {$this->calendarTableName} c ON c.id = o.calendarid
+                    INNER JOIN {$this->calendarInstancesTableName} i ON c.id = i.calendarid
+            WHERE i.principaluri = ? AND i.uri = ? AND o.uri = ?
+SQL
+        );
+
+        $stmt->execute([$calendarOwner, $calendarUri, $objectUri]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        return [
+            'id'           => $row['id'],
+            'uri'          => $row['uri'],
+            'lastmodified' => (int)$row['lastmodified'],
+            'etag'         => '"' . $row['etag'] . '"',
+            'size'         => (int)$row['size'],
+            'calendardata' => $row['calendardata'],
+            'component'    => strtolower($row['componenttype']),
+         ];
+    }
+
     /**
      * Returns a list of calendar objects.
      *
@@ -586,6 +639,38 @@ SQL
 
     }
 
+    #region Babylcraft added
+    /**
+     * Bypasses the calendarChanges table and returns the id of the inserted calendar object.
+     */
+    function createObjectSimple(array $calendarId, string $objectUri, $calendarData) : int
+    {
+        list($calendarId, $instanceId) = $calendarId;
+        $extraData = $this->getDenormalizedData($calendarData);
+        $stmt = $this->pdo->prepare(<<<SQL
+            INSERT INTO {$this->calendarObjectTableName}
+            (calendarid, uri, calendardata, lastmodified, etag, size, componenttype, firstoccurence, lastoccurence, uid)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+SQL
+        );
+
+        $stmt->execute([
+            $calendarId[0],
+            $objectUri,
+            $calendarData,
+            time(),
+            $extraData['etag'],
+            $extraData['size'],
+            $extraData['componentType'],
+            $extraData['firstOccurence'],
+            $extraData['lastOccurence'],
+            $extraData['uid'],
+        ]);
+
+        return intval($this->pdo->lastInsertId());
+    }
+    #endregion
+
     /**
      * Updates an existing calendarobject, based on it's uri.
      *
@@ -617,7 +702,7 @@ SQL
         $stmt->execute([$calendarData, time(), $extraData['etag'], $extraData['size'], $extraData['componentType'], $extraData['firstOccurence'], $extraData['lastOccurence'], $extraData['uid'], $calendarId, $objectUri]);
 
         $this->addChange($calendarId, $objectUri, 2);
-
+    
         return '"' . $extraData['etag'] . '"';
 
     }

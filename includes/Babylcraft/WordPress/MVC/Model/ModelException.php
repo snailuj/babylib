@@ -14,6 +14,9 @@ class ModelException extends BabylonException
     const ERR_UNKNOWN_MAPPING      = 0x20;
     const ERR_NO_ID                = 0x40;
     const ERR_UNIQUE_VIOLATION     = 0x80;
+    const ERR_INCORRECT_ROW_COUNT  = 0x100;
+    const ERR_BAD_QUERY            = 0x200;
+    const ERR_WRONG_TYPE           = 0x400;
     
     protected function codeToMessage(int $code, $context) : string
     {
@@ -49,6 +52,18 @@ class ModelException extends BabylonException
 
         if ($this->codeIncludesError($this::ERR_UNIQUE_VIOLATION)) {
             $message .= "Uniqueness constraint violation.";
+        }
+
+        if ($this->codeIncludesError($this::ERR_INCORRECT_ROW_COUNT)) {
+            $message .= "Wrong number of rows returned or affected by a query.";
+        }
+
+        if ($this->codeIncludesError($this::ERR_BAD_QUERY)) {
+            $message .= "Malformed query.";
+        }
+
+        if ($this->codeIncludesError($this::ERR_WRONG_TYPE)) {
+            $message .= "Wrong Model object type";
         }
         
         return $message .($context ? " ". (string)$context ." " : "");
