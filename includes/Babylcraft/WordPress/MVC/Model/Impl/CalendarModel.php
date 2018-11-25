@@ -15,6 +15,7 @@ use Babylcraft\WordPress\MVC\Model\Sabre\VObjectUtil;
 use Babylcraft\WordPress\MVC\Model\Sabre\IVObjectFactory;
 use Sabre\VObject\Component\VEvent;
 use Sabre\VObject\Component\VCalendar;
+use Sabre\VObject\Node;
 
 class CalendarModel extends BabylonModel implements ICalendarModel
 {
@@ -22,6 +23,10 @@ class CalendarModel extends BabylonModel implements ICalendarModel
      * @var VObjectFactory used for creating Sabre\VObject\Recur recurrence-rule checking
      */
     protected $vobjectFactory;
+
+    /**
+     * @var VCalender Cached copy of the VCalender representation
+     */
     protected $vcalendar;
 
     #region Static
@@ -93,31 +98,63 @@ class CalendarModel extends BabylonModel implements ICalendarModel
         return IEventModel::class;
     }
 
-    protected function addEventModel(IEventModel $eventModel) : IEventModel
+    public function asVObject() : Node
     {
-        $this->addChild($this->getChildKey($eventModel), $eventModel);
-        $test = $this->vobjectFactory->eventToVEvent($eventModel, $this->asVCalendar());
-        return $eventModel;
-    }
-
-    public function asVCalendar() : VCalendar
-    {
-        if ($this->isDirty || !$this->vcalendar) {
-            $this->vcalendar = $this->vobjectFactory->calendarToVCalendar($this);
+        if (!$this->vcalendar) { //set null in doSetValue() override
+            $this->vcalendar = $this->vobjectFactory->getAsVCalendar($this);
         }
 
         return $this->vcalendar;
     }
 
-    public function getEventAsVEvent(string $name) : ?VEvent
+    protected function addEventModel(IEventModel $eventModel) : IEventModel
     {
-        $arr = $this->asVCalendar()->getByUID($name);
-        if (sizeof($arr) > 0) {
-            return $arr;
+        $this->addChild($this->getChildKey($eventModel), $eventModel);
+        $this->vobjectFactory->copyToVCalendar($eventModel, $this->asVCalendar());
+        return $eventModel;
+    }
+
+    public function asVCalendar() : VCalendar
+    {
+        return $this->asVObject();
+    }
+
+    public function getEventAsVObject(string $name) : ?Node
+    {
+        $test = $this->asVCalendar()->searchByURI($name);
+        return $test;
+
+        // $model = null;
+        // foreach ($this->getEvents() as $eventName => $event) {
+        //     if ($eventName === $name) {
+        //         return $this->asVCalendar()->searchByURI($event->getValue(IEventModel::F_NAME));
+        //     }
+
+        //     foreach ($event->getVariations() as $variationName => $variation) {
+        //         if ($variationName === $name) {
+        //             $parentNode = $this->asVCalendar()->getByUID($event->getValue(IEventModel::F_UID));
+        //             foreach ($parentNode->select('EXRULE') as $recur) {
+        //                 if ($name === $recur->offsetGet($variation->getFieldName(IEventModel::F_UID))->getValue()) {
+        //                     return $recur;
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+
+        // return null;
+    }
+
+    public function getEventsByDate(\DateTimeInterface $date) : array
+    {
+        $events = [];
+        foreach ($this->getEvents() as $eventName => $event) {
+            if ($event->isInTimeRange($date, \DateInterval::createFromDateString('1 days'))) {
+                $events[] = $event;
+            }
         }
 
-        $this->getEvent($name);
-        return null;
+        return $events;
     }
 
     /**
@@ -158,6 +195,12 @@ class CalendarModel extends BabylonModel implements ICalendarModel
         }
 
         throw new FieldException(FieldException::ERR_WRONG_TYPE, get_class($child) . " is not a valid child of CalendarModel");
+    }
+
+    protected function doSetValue(int $field, $value) : void
+    {
+        parent::doSetValue($field, $value);
+        $this->vcalendar = null;
     }
     #endregion
 }

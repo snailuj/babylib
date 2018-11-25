@@ -712,4 +712,46 @@ class Component extends Node {
 
     }
 
+    #region Babylcraft added
+    /**
+     * Returns self if the URI matches, else the first child component or property with the specified URI.
+     * 
+     * @return array
+     */
+    public function searchByURI(string $uri) : ?Node
+    {
+        $match = null;
+
+        if ($this->URI && $this->URI->getValue() === $uri) {
+            $match = $this;
+        } else {
+            foreach ($this->children as $childgroup) {
+                foreach ($childgroup as $child) {
+                    if ($child instanceof Property && $child->name = 'URI' ) {
+                        //is a URI Property. Value match?
+                        if ($child->getValue() === $uri) {
+                            $match = $child;
+                            goto found; //adults can use goto
+                        }
+                    } else if ($child instanceof Component ) {
+                        //match?
+                        if ( ($uriVal = $child->select('URI')[0] ?? null)
+                            && $uriVal->getValue() === $uri
+                        ) {
+                            $match = $child;
+                            goto found;
+                        }
+
+                        //not found, but child is a Component, so recurse its children
+                        if (!$match) {
+                            $match = $child->searchByURI($uri);
+                        }
+                    }
+                }
+            }
+        }
+
+        found: return $match;
+    }
+    #endregion
 }

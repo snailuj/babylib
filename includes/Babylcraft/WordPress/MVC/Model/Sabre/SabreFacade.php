@@ -10,6 +10,7 @@ use Babylcraft\WordPress\MVC\Model\ICalendarModel;
 use Babylcraft\WordPress\MVC\Model\IEventModel;
 use Babylcraft\WordPress\MVC\Model\ModelException;
 use Sabre\VObject\Property\ICalendar\Recur;
+use Babylcraft\Util;
 
 class SabreFacade implements IVObjectFactory
 {
@@ -244,6 +245,22 @@ class SabreFacade implements IVObjectFactory
         return $root;
     }
 
+    #region IVObjectFactory implementation
+    public function getAsVCalendar(ICalendarModel $calendar) : VCalendar
+    {
+        return $this->calendarToVCalendar($calendar);
+    }
+
+    public function copyToVCalendar(IEventModel $event, VCalendar $vcalendar) : VEvent
+    {
+        return $this->eventToVEvent($event, $vcalendar);
+    }
+
+    public function copyToVEvent(IEventModel $variation, VEvent $vevent) : Recur
+    {
+        return $this->variationToExrule($variation, $vevent);
+    }
+    #endregion
     /**
      * Converts the given IEventModel into a VEvent and returns it.
      * The VCalendar used to create the VEvent can be accessed via `eventToVevent()->root`
@@ -251,6 +268,11 @@ class SabreFacade implements IVObjectFactory
     public function eventToVEvent(IEventModel $event, VCalendar $root = null) : VEvent
     {
         $root = $root ?? new VCalendar([], $defaults = false);
+
+        if ($vevent = $root->searchByURI($event->getValue(IEventModel::F_NAME)) ) {
+            //found a matching VEVENT, remove it to avoid duplicates (URI is unique in Babylcraft ICal implementation)
+            $root->remove($vevent);
+        }
 
         $vevent = $root->add("VEVENT", $event->getSerializable());
 
@@ -353,7 +375,8 @@ class SabreFacade implements IVObjectFactory
     private function dbToVObject(array $calendarObjectData) : VObject\Component
     {
         $component = VObject\Reader::read($calendarObjectData['calendardata']);
-        $component->add("DB_ID", $calendarObjectData['id']);
+        $component = current($component->getComponents()); //strip off the wrapper VCalendar (ICal dumbness)
+        $component->add("DB_ID", intval($calendarObjectData['id']));
 
         return $component;
     }

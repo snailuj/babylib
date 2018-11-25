@@ -14,6 +14,11 @@ use Babylcraft\WordPress\MVC\Model\Impl\UniqueModelIterator;
 interface IBabylonModel extends IDataMapper
 {
     /**
+     * Returns true if this model has unsaved changes, false if not.
+     */
+    function isDirty() : bool;
+
+    /**
      * Load a Model from storage via F_ID
      * 
      * @throws ModelException ERR_RECORD_NOT_FOUND if data is not found for this model
@@ -96,7 +101,7 @@ interface IBabylonModel extends IDataMapper
      * @throws FieldException ERR_UNIQUE_VIOLATION if a child of that type already
      * exists at position $key
      */
-    function addChild($key, IBabylonModel $child) : void;
+    function addChild($key, IBabylonModel $child) : IBabylonModel;
 
     /**
      * Adds a child uniquely identified by $key to the list of children.

@@ -9,6 +9,8 @@ use Babylcraft\WordPress\MVC\Model\FieldException;
 use Babylcraft\WordPress\MVC\Model\IBabylonModel;
 use Babylcraft\WordPress\MVC\Model\IUniqueModelIterator;
 use Babylcraft\WordPress\MVC\Model\Sabre\IVObjectFactory;
+use Sabre\VObject\Node;
+use Sabre\VObject\Recur\RRuleIterator;
 
 class EventModel extends BabylonModel implements IEventModel
 {
@@ -17,7 +19,16 @@ class EventModel extends BabylonModel implements IEventModel
      */
     private $isVariation = false;
 
+    /**
+     * @var IVObjectFactory Injected by the model factory, used for creating EXRULEs whenever a 
+     * variation is added
+     */
     protected $vobjectFactory;
+
+    /**
+     * @var RRuleIterator Cached iterator for this event model's recurrence rule
+     */
+    protected $rruleIterator;
 
     #region static
 
@@ -33,14 +44,12 @@ class EventModel extends BabylonModel implements IEventModel
      * recurrence.
      * @param [\DateTimeInterface] $start The start date and time for the event; note that this is nullable
      * for `EventModel`s that represent an EXRULE, but is required by the ICal spec for VEVENTs
-     * @param string $uid Unique identifier for this `EventModel` object
      */
     public static function construct(
         IBabylonModel $parent,
         string $name,
         string $rrule,
-        ?\DateTimeInterface $start,
-        string $uid
+        ?\DateTimeInterface $start
     ) : IEventModel
     {
         $new = new static();
@@ -59,10 +68,7 @@ class EventModel extends BabylonModel implements IEventModel
         }
 
         $new->setValues($fields);
-        $new->setReadonlyValues([
-            static::F_NAME => $name,
-            static::F_UID  => $uid
-        ]);
+        $new->setReadonlyValue(static::F_NAME, $name);
         
         return $new;
     }
@@ -85,14 +91,9 @@ class EventModel extends BabylonModel implements IEventModel
     #endregion
 
     #region IEventModel Implementation
-    public function addVariation(string $name, string $rrule, string $uid = '') : IEventModel
+    public function addVariation(string $name, string $rrule) : IEventModel
     {
-        return $this->addVariationModel($this->getModelFactory()->newVariation($this, $name, $rrule, $uid));
-    }
-
-    public function addNewVariation(string $name, string $rrule) : IEventModel
-    {
-        return $this->addVariation($name, $rrule, '');
+        return $this->addVariationModel($this->getModelFactory()->newVariation($this, $name, $rrule));
     }
 
     public function isVariation() : bool
@@ -102,32 +103,80 @@ class EventModel extends BabylonModel implements IEventModel
 
     public function getVariations() : IUniqueModelIterator
     {
+        if ($this->isVariation()) {
+            throw new ModelException(ModelException::ERR_WRONG_TYPE, "Cannot get variations from a variation.");
+        }
+
         return $this->getChildIterator(IEventModel::class);
     }
 
-    public function getVariation(string $uid) : ?IEventModel
+    public function getVariation(string $name) : ?IEventModel
     {
-        return $this->getVariations()[$uid] ?? null;
+        return $this->getVariations()[$name] ?? null;
+    }
+
+    public function asVObject() : Node
+    {
+        $node = $this->getParent()->getEventAsVObject($this->getValue(static::F_NAME));
+        if (!$node) {
+            throw new ModelException(ModelException::ERR_RECORD_NOT_FOUND, "Missing VObject with my name in parent->asVCalendar()");
+        }
+
+        return $node;
+    }
+
+    public function isInTimerange(\DateTimeInterface $startDate, \DateInterval $interval): bool
+    {
+        for ($iter = $this->getRRuleIterator($startDate), 
+              $end = $startDate->add($interval); $iter->current < $end && $iter->valid(); $iter->next()) {
+                return true; //if we get here, we've found a match
+        }
+
+        return false;
     }
 
     protected function addVariationModel(IEventModel $variation) : IEventModel
     {
+        if ($this->isVariation()) {
+            throw new ModelException(ModelException::ERR_WRONG_TYPE, "Cannot add variation to a variation.");
+        }
+
         $this->addChild($this->getChildKey($variation), $variation);
-        $test = $this->vobjectFactory->variationToExrule(
-            $variation,
-            $this->getParent()->getEventAsVEvent($this->getValue(static::F_UID))
+        $this->vobjectFactory->copyToVEvent(
+                $variation,
+                $this->asVObject()
         );
         
         return $variation;
     }
+
+    protected function getRRuleIterator(\DateTimeInterface $startDate = null) : RRuleIterator
+    {
+        if (null === $this->rruleIterator 
+            || $this->getValue(static::F_RRULE) != $this->rruleIterator->getRRule()) {
+            $this->rruleIterator = new RRuleIterator($this->getValue(static::F_RRULE));
+        }
+
+        if ($startDate) {
+            $this->rruleIterator->setStartDate($startDate);
+        }
+
+        return $this->rruleIterator;
+    }
     #endregion
 
     #region overrides
+    public function isDirty() : bool
+    {   //EXRULEs are saved to the table-row of their enclosing VEvent
+        //no need for, nor way to accomplish, individual saving
+        return $this->dirty && !$this->isVariation();
+    }
+
     /**
      * For EventModels that are variations (aka EXRULEs in iCalendar-speak), we provide for
-     * storing 'uri' and 'uid' as "non-standard PARAMETERS" on the EXRULE.
+     * storing 'uri' as a "non-standard PARAMETER" on the EXRULE.
      * 
-     * For EventModels that are NOT variations, we do store values as regular properties.
+     * For EventModels that are NOT variations, we store values as regular properties.
      */
     public function getSerializable($byFieldPack = 0): array
     {
@@ -141,17 +190,12 @@ class EventModel extends BabylonModel implements IEventModel
                 // TODO remove magic numbers
                 $map[0] = $this->getValue(static::F_RRULE);
                 $map[1] = [
-                        $this->getFieldName(static::F_UID)  => $this->getValue(static::F_UID),
-                        $this->getFieldName(static::F_NAME) => $this->getValue(static::F_NAME)
+                    $this->getFieldName(static::F_NAME) => $this->getValue(static::F_NAME)
                 ];
             }
         } else {
             if ( !$byFieldPack || ($byFieldPack & static::F_RRULE != 0) ) {
                 $map[$this->getFieldName(static::F_RRULE)] = $this->getValue(static::F_RRULE);
-            }
-            
-            if ( !$byFieldPack || ($byFieldPack & static::F_UID != 0) ) {
-                $map[$this->getFieldName(static::F_UID)] = $this->getValue(static::F_UID);
             }
 
             if ( !$byFieldPack || ($byFieldPack & static::F_NAME != 0) ) {
@@ -177,12 +221,6 @@ class EventModel extends BabylonModel implements IEventModel
         // both use the URI to identify events so there's no need to clutter the JSON with IDs
         //
         unset($this->fields[static::F_ID][static::K_NAME]);
-    }
-
-    protected function isDirty() : bool
-    {   //EXRULEs are saved to the table-row of their enclosing VEvent
-        //no need for, nor way to accomplish, individual saving
-        return $this->dirty && !$this->isVariation();
     }
 
     protected function getChildKey(IBabylonModel $variation)

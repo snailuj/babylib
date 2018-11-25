@@ -6,6 +6,7 @@ use Sabre\VObject;
 use Sabre\VObject\Component\VCalendar;
 use Sabre\VObject\Component\VEvent;
 use Babylcraft\WordPress\MVC\Model\Sabre\IVObjectClient;
+use Sabre\VObject\Node;
 
 /**
  * Wraps a Sabre VCalendar so it's more codey and less CalDAV-ey and Sabre-ey
@@ -40,13 +41,11 @@ interface ICalendarModel extends IBabylonModel, IVObjectClient
      * @param string $name Name of the event
      * @param [string] $rrule Recurrence rule
      * @param \DateTimeInterface $dtStart The start date of the event
-     * @param [string] $uid A unique identifier for this event; if not supplied one will be generated during
-     * instantiation.
      */
-    function addEvent(string $name, string $rrule = '', \DateTimeInterface $dtStart, string $uid = '') : IEventModel;
+    function addEvent(string $name, string $rrule = '', \DateTimeInterface $dtStart) : IEventModel;
 
     /**
-     * Returns an iterator for all IEventModel children of this ICalendarModel.
+     * Returns an iterator for all IEventModel children of this ICalendarModel, keyed by event name.
      */
     function getEvents() : IUniqueModelIterator;
 
@@ -61,7 +60,13 @@ interface ICalendarModel extends IBabylonModel, IVObjectClient
     function asVCalendar() : VCalendar;
 
     /**
-     * Gets a VEvent representation of a specific event by name
+     * Gets a VObject representation of a specific event by name. This could be either a VEvent
+     * or a Recur (if $name does not refer to a known event, but matches a variation).
      */
-    function getEventAsVEvent(string $name) : ?VEvent;
+    function getEventAsVObject(string $name) : ?Node;
+
+    /**
+     * Returns a list of all events that fall on the given date.
+     */
+    function getEventsByDate(\DateTimeInterface $date) : array;
 }

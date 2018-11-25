@@ -75,7 +75,7 @@ interface IModelFactory
      * 
      * @return IEventModel The IEventModel object that represents the event
      */
-    function newEvent(ICalendarModel $parent, string $name, string $rrule, \DateTimeInterface $start, string $uid) : IEventModel;
+    function newEvent(ICalendarModel $parent, string $name, string $rrule, \DateTimeInterface $start) : IEventModel;
 
     /**
      * Creates a new IEventModel with the given name and recurrence rule, and adds it as a variation
@@ -87,5 +87,5 @@ interface IModelFactory
      * 
      * @return IEventModel The IEventModel object that represents the variation
      */
-    function newVariation(IEventModel $parent, string $name, string $rrule, string $uid) : IEventModel;
+    function newVariation(IEventModel $parent, string $name, string $rrule) : IEventModel;
 }

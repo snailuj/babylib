@@ -10,6 +10,7 @@ use Sabre\VObject\InvalidDataException;
 use Sabre\VObject\Property;
 use Sabre\VObject\Recur\EventIterator;
 use Sabre\VObject\Recur\NoInstancesException;
+use Sabre\VObject\Node;
 
 /**
  * The VCalendar component.
@@ -556,6 +557,4 @@ class VCalendar extends VObject\Document {
         });
 
     }
-
-
 }

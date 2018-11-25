@@ -123,17 +123,15 @@ class ModelFactory implements IModelFactory
         ICalendarModel $parent,
         string $name,
         string $rrule,
-        \DateTimeInterface $start,
-        string $uid
+        \DateTimeInterface $start
     ): IEventModel
     {
         $model = $this->withSparkles(
             $this->getImplementingClass(IEventModel::class)::construct(
-                $parent,
-                $name,
-                $rrule,
-                $start,
-                $uid !== '' ? $uid : \Babylcraft\Util::generateUid()
+                $parent
+                , $name
+                , $rrule
+                , $start
             )
         );
     }
@@ -141,17 +139,15 @@ class ModelFactory implements IModelFactory
     public function newVariation(
         IEventModel $parent,
         string $name,
-        string $rrule,
-        string $uid
+        string $rrule
     ) : IEventModel
     {
         return $this->withSparkles(
             $this->getImplementingClass(IEventModel::class)::construct(
-                $parent,
-                $name,
-                $rrule,
-                null,
-                $uid !== '' ? $uid : \Babylcraft\Util::generateUid()
+                $parent
+                , $name
+                , $rrule
+                , null //DTSTART not required or useful for EXRULEs
             )
         );
     }
@@ -395,8 +391,8 @@ class ModelFactory implements IModelFactory
     protected function vcalendarToCalendarModel(VCalendar $from, ICalendarModel $to, bool $deep = true) : void
     {
         $to->setValues([
-            ICalendarModel::F_TZ    => $from->TZID->getValue(),
-            IDataMapper::F_ID       => \explode(",", $from->ID) //seriously sabre WTF
+            ICalendarModel::F_TZ => $from->TZID->getValue(),
+            IDataMapper::F_ID    => \explode(",", $from->ID) //seriously sabre WTF
         ]);
 
         $this->setReadonlyModelValues($to, [
@@ -404,93 +400,84 @@ class ModelFactory implements IModelFactory
             ICalendarModel::F_URI   => $from->URI->getValue()
         ]);
 
-        $this->setModelDirty($to, false); //model does not need saving
-        
-        //$to->setVObjectFactory($this->sabre);
-
-        $vevents = [];
-        foreach ( $from->VCALENDAR as $eventWrapper ) {
-            foreach ( $eventWrapper->VEVENT as $vevent ) {
-                $vevents[] = $vevent;
-            }
-        }
-
-        $iter = new \Sabre\VObject\Recur\EventIterator($vevents);
-        $vevents[] = 'test';
+        $this->setModelDirty($to, false); //model does not need saving, we just loaded it
 
         if ($deep) {
             $this->veventsToEventModels($from, $to, $deep);
         }
     }
 
-    protected function veventsToEventModels(VCalendar $from, ICalendarModel $to, bool $deep = true) : void
+    protected function veventsToEventModels(VCalendar $from, ICalendarModel $parent, bool $deep = true) : void
     {
-        foreach ( $from->VCALENDAR as $eventWrapper ) {
-            foreach ( $eventWrapper->VEVENT as $vevent ) {
-                $this->veventToEventModel($vevent, $to, $deep);
+        foreach ( $from->VEVENT as $vevent ) {
+            //EventModel already exists on the Calendar?
+            if (!$child = $parent->getEvent($from->URI->getValue())) {
+                //nope, create new one
+                $child = $parent->addChild(
+                    $vevent->URI->getValue()
+                  , $this->newEvent(
+                        $parent
+                      , $vevent->URI->getValue()
+                      , $vevent->RRULE->getValue()
+                      , $vevent->DTSTART->getDateTime()
+                    )
+                );
             }
+            
+            //there is no use case where user edits take place on a VObject before being copied to a Model
+            //(it's always the other way around)
+            //and this is a brand new Model
+            //so we can assume that neither this Model nor its parent are dirty as a result of this operation
+            $this->veventToEventModel($vevent, $child, $deep);
+            $this->setModelDirty($parent, false);//$child->dirty = false is done in the previous call
         }
     }
 
-    protected function veventToEventModel(VEvent $from, ICalendarModel $parent, bool $deep = true) : IEventModel
+    protected function veventToEventModel(VEvent $from, IEventModel $to, bool $deep = true) : void
     {
-        //try and get the event model in $parent that matches the UID in $from
-        if ( $eventModel = $parent->getEvent($from->URI->getValue()) ) {
-            //found it, so just update the values that we have. No need to update UID
-            //because it's already set
-            $eventModel->setValues([
-                IEventModel::F_RRULE => $from->RRULE->getValue(),
-                IEventModel::F_START => $from->DTSTART->getDateTime()
-            ]);
+        $to->setValues([
+            IEventModel::F_RRULE => $from->RRULE->getValue()
+          , IEventModel::F_START => $from->DTSTART->getDateTime()
+        ]);
 
-            $this->setReadonlyModelValue($eventModel, IEventModel::F_NAME, $from->SUMMARY->getValue());
-            $this->setModelDirty($eventModel, false); //model does not need saving
-        } else {
-            //not found, so create one and load the values into it
-            //we use the UID from the VEvent because these sabre-to-model functions
-            //are only called when going from existant DB records to in-memory Model objects
-            //therefore we can assume the UID has already been generated before the 
-            //data was persisted
-            $eventModel = $parent->addEvent(
-                $from->URI->getValue(),
-                $from->RRULE->getValue(),
-                $from->DTSTART->getDateTime(),
-                $from->UID->getValue()
-            );
-
-            //$eventModel->setVObjectFactory($this->sabre);
-        }
+        $this->setReadonlyModelValues($to, [
+            IEventModel::F_ID   => $from->DB_ID->getValue()
+          , IEventModel::F_NAME => $from->URI->getValue()
+        ]);
         
         if ($deep) {
-            $this->exrulesToVariations($from, $eventModel);
+            $this->exrulesToVariations($from, $to);
         }
 
-        return $eventModel;
+        $this->setModelDirty($to, false); //model does not need saving
     }
 
     protected function exrulesToVariations(VEvent $from, IEventModel $parent) : void
     {
         foreach ( $from->EXRULE as $exrule ) {
-            //exrule already exists on the parent?
-            if ( $variation = $this->getVariationForExrule($parent, $exrule) ) {
-                //then just copy the values into it
-                $this->exruleToVariation($exrule, $variation);
-            } else {
-                //else create a new one
-                //we use the UID from the EXRULE because these sabre-to-model functions
-                //are only called when going from existant DB records to in-memory Model objects
-                //therefore we can assume the UID has already been generated before the 
-                //data was persisted
-                $variation = $parent->addVariation(
-                    $exrule->offsetGet(
-                        $parent->getFieldName(IEventModel::F_NAME)
-                    )->getValue(),
-                    $exrule->getValue(),
-                    $exrule->offsetGet(
-                        $parent->getFieldName(IEventModel::F_UID)
-                    )->getValue()
+            if ( //exrule already exists on the parent?
+                !$child = $parent->getVariation(
+                    $exrule[$parent->getFieldName(IEventModel::F_NAME)]->getValue()
+                )
+            ) {
+                //nope, create a new one
+                $child = $parent->addChild(
+                    $exrule[$parent->getFieldName(IEventModel::F_NAME)]->getValue()
+                  , $this->newVariation(
+                        $parent
+                      , $exrule[$parent->getFieldName(IEventModel::F_NAME)]->getValue()
+                      , $exrule->getValue()
+                    )
                 );
             }
+
+            //there is no use case where user edits take place on a VObject before being copied to a Model
+            //(it's always the other way around)
+            //and this is a brand new Model
+            //so we can assume that neither this Model nor its parent are dirty as a result of this operation
+            //
+            $this->exruleToVariation($exrule, $child);
+            $this->setModelDirty($parent, false); //$child->dirty = false is done in the previous call
         }
     }
 
@@ -498,26 +485,12 @@ class ModelFactory implements IModelFactory
     {
         $to->setValue(IEventModel::F_RRULE, $from->getValue());
         $this->setReadonlyModelValue(
-            $to,
-            IEventModel::F_NAME,
-            $from->offsetGet(
-                $to->getFieldName(IEventModel::F_NAME)
-            )->getValue()
+            $to
+            , IEventModel::F_NAME
+            , $from[$to->getFieldName(IEventModel::F_NAME)]->getValue()
         );
 
-        $this->setModelDirty($to, false); //model does not need saving
-    }
-
-    /**
-     * Returns a variation with the same UID as the given Recur object, or null if not
-     * exists on the given IEventModel object.
-     */
-    protected function getVariationForExrule(IEventModel $parent, Recur $exrule) : ?IEventModel
-    {
-        return $parent->getVariation(
-            //this baroque line of code retrieves the UID from the Recur object
-            $exrule->offsetGet($parent->getFieldName(IEventModel::F_UID))->getValue()
-        );
+        $this->setModelDirty($to, false);
     }
     #endregion
 
@@ -730,9 +703,9 @@ class ModelFactory implements IModelFactory
 
     protected function setModelDirty(IBabylonModel $model, bool $dirty) : void
     {
-        $property = new \ReflectionProperty($model, 'isDirty');
-        $property->setAccessible(true);
-        $property->setValue($model, $dirty);
+        $method = new \ReflectionMethod($model, 'setDirty');
+        $method->setAccessible(true);
+        $method->invoke($model, $dirty);
     }
 
     /**
@@ -800,8 +773,6 @@ class ModelFactory implements IModelFactory
         if ($model instanceof IVObjectClient) {
             $model->setVObjectFactory($this->sabre);
         }
-        
-        $this->setModelDirty($model, false); //doesn't need saving, we only just made it
 
         return $model;
     }

@@ -30,13 +30,33 @@ class RRuleIterator implements Iterator {
      * @param string|array $rrule
      * @param DateTimeInterface $start
      */
-    function __construct($rrule, DateTimeInterface $start) {
+    function __construct($rrule, DateTimeInterface $start = null) {
+
+        //region Babylcraft added
+        //also made $start nullable, an optimization so that the iterator can be
+        //reused with different start dates (only exception being if it has an UNTIL
+        //clause, in which case parseRRule will throw an exception if startDate is null)
+        $this->rrule = $rrule;
+        //endregion
 
         $this->startDate = $start;
         $this->parseRRule($rrule);
         $this->currentDate = clone $this->startDate;
 
     }
+
+    #region Babylcraft added
+    function setStartDate(DateTimeInterface $start)
+    {
+        $this->startDate = $start;
+        $this->rewind();
+    }
+
+    function getRRule() : string
+    {
+        return $this->rrule;
+    }
+    #endregion
 
     /* Implementation of the Iterator interface {{{ */
 
@@ -150,6 +170,13 @@ class RRuleIterator implements Iterator {
         }
 
     }
+
+    #region Babylcraft added
+    /**
+     * @var string The rrule this iterator was created with
+     */
+    protected $rrule;
+    #endregion
 
     /**
      * The reference start date/time for the rrule.
@@ -732,6 +759,12 @@ class RRuleIterator implements Iterator {
                     break;
 
                 case 'UNTIL' :
+                    //region Babylcraft added
+                    if (!$this->startDate) {
+                        throw new InvalidDataException('Cannot use UNTIL with a null startDate');
+                    }
+                    //endregion
+
                     $this->until = DateTimeParser::parse($value, $this->startDate->getTimezone());
 
                     // In some cases events are generated with an UNTIL=

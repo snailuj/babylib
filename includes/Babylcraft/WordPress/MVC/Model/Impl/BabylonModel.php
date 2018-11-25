@@ -28,7 +28,7 @@ abstract class BabylonModel implements IBabylonModel
     protected function __construct() //can only be built from within via static methods
     {
         $this->setupFields();
-        $this->dirty = true; //if created from code, needs DB save
+        $this->setDirty(true); //if created from code, needs DB save
     }
 
     abstract static public function getSchema(
@@ -58,7 +58,7 @@ abstract class BabylonModel implements IBabylonModel
     public function hydrate() : void
     {
         $this->doHydrate();
-        $this->dirty = false;
+        $this->setDirty(false, $recurse = true);
     }
 
     /**
@@ -69,8 +69,7 @@ abstract class BabylonModel implements IBabylonModel
         if ( $this->isDirty() ) {
             $this->allValid();
             $this->getModelFactory()->persist($this);
-
-            $this->dirty = false;
+            $this->setDirty(false);
         }
 
         if ( $recurse ) {
@@ -136,14 +135,14 @@ abstract class BabylonModel implements IBabylonModel
     /**
      * @see IBabylonModel::addChild()
      */
-    public function addChild($key, IBabylonModel $child) : void
+    public function addChild($key, IBabylonModel $child) : IBabylonModel
     {
         if (!$iter = $this->getChildIterator($this->getModelFactory()->getModelInterface($child))) {
             throw new FieldException(FieldException::ERR_NOT_FOUND, "Child is not of a declared child type for this model. ");
         }
 
         $child->setParent($this);
-        $iter[$key] = $child;
+        return $iter[$key] = $child;
     }
 
     public function addChildren(array $children) : void
@@ -174,12 +173,12 @@ abstract class BabylonModel implements IBabylonModel
     public function setValue(int $field, $value) : void
     {
         //TODO optimise here by only setting the dirty flag if the value is actually different
-        //requires equality comparisons
+        //requires equality comparisons but will prevent unnecessary DB updates
 
         //validate against all validatable errors, throws exception if invalid
         $this->validate($field, $value);
         $this->doSetValue($field, $value);
-        $this->isDirty = true;
+        $this->setDirty(true);
     }
     #endregion
 
@@ -335,9 +334,21 @@ abstract class BabylonModel implements IBabylonModel
     /**
      * Override if you need special logic to determine saving behaviour
      */
-    protected function isDirty() : bool
+    public function isDirty() : bool
     {
         return $this->dirty;
+    }
+
+    protected function setDirty(bool $dirty, $recurse = false) : void
+    {
+        $this->dirty = $dirty;
+        if ($recurse) {
+            foreach ( $this->getChildIterators() as $iter ) {
+                foreach ( $iter as $key => $model ) {
+                    $model->setDirty($dirty, $recurse);
+                }
+            }
+        }
     }
 
     /**
@@ -401,7 +412,7 @@ abstract class BabylonModel implements IBabylonModel
         //validate against all EXCEPT read-only, throws exception on error
         $this->validate($field, $value, FieldException::ALL_VALIDATABLE & ~FieldException::ERR_READ_ONLY);
         $this->doSetValue($field, $value);
-        $this->dirty = true;
+        $this->setDirty(true);
     }
 
     protected function doSetValue(int $field, $value) : void
