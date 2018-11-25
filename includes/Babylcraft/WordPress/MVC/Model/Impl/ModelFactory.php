@@ -307,13 +307,9 @@ class ModelFactory implements IModelFactory
         if ($model instanceof ICalendarModel) {
             $vcalendar = $this->sabre->loadVCalendar($model);
             $this->vcalendarToCalendarModel($vcalendar, $model);
-
-            \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$vcalendar->jsonSerialize()), "ModelFactory::load(calendar)");
         } else if ($model instanceof IEventModel ) {
             $vevent = $this->sabre->loadVEvent($model);
             $this->veventToEventModel($vevent, $model);
-
-            \Babylcraft\WordPress\PluginAPI::debugContent(json_encode(@$vevent->jsonSerialize()), "ModelFactory::load(event)");
         } else {
             $statement = $this->getSelectAllEqualStatement($model, $byFieldPack);
             try {
