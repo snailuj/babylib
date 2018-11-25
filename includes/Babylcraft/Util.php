@@ -31,6 +31,7 @@ class Util
 
     static public function newModelPDOException(\PDOException $e, \PDOStatement $statement = null) : ModelException
     {
+        $context = '';
         if ($statement != null) {
             $context = "when executing statement, dumping info "
                 ."\n[SQLSTATE] ". $statement->errorCode
