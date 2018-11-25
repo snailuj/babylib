@@ -3,7 +3,7 @@
     "description" : "Plugin MVC framework with helpful additions",
     "keywords" : [ "wordpress", "bookings", "babylcraft" ],
     "license" : "GPL-2.0+",
-    "version" : "4.0.0",
+    "version" : "4.1.0",
     "authors" : [
         {
             "name" : "Julian Suggate",
