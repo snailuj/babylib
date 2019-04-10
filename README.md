@@ -8,4 +8,6 @@ This is my attempt to abstract that kruft away and roll my own persistence layer
 
 I also wanted to allow plugin composition via composer, so I could deliver apps that consisted of a bunch of plugins tied together by an overall plugin that consisted only of a `composer.json` and some DB config files. That part seems to work pretty nicely.
 
+The `BabylonModel` hierarchy could be made nicer if it used the Active Record pattern. Still, it works fine for what I needed.
+
 I no longer work with WordPress, so I'm not actively maintaining this project. Feel free to raise issues and I'll try and answer, but won't be fixing any bugs or adding any features. Feel free to fork it yourself if you want something changed!
